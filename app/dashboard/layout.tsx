@@ -1,6 +1,6 @@
 import { LogoutButton } from '@/components/logout-button'
 import Link from 'next/link'
-import { Bell, BarChart2, BookOpen, Calendar, Home, Search, Settings, User, FileText, ChevronDown } from 'lucide-react'
+import { Bell, BarChart2, BookOpen, Calendar, Home, Search, Settings, User, FileText, ChevronDown, Video } from 'lucide-react'
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import {
@@ -99,6 +99,10 @@ export default async function DashboardLayout({
               <NavItem href="/dashboard/content">
                 <FileText className="h-4 w-4" />
                 Educational Content
+              </NavItem>
+              <NavItem href="/dashboard/sessions">
+                <Video className="h-4 w-4" />
+                Sessions
               </NavItem>
               <NavItem href="/dashboard/attendance">
                 <Calendar className="h-4 w-4" />
