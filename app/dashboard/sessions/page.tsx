@@ -27,11 +27,43 @@ interface Session {
   created_by: string;
 }
 
+type FilterType = 'all' | 'upcoming' | 'active' | 'past';
+
 export default function SessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Apply filters to sessions based on the active filter
+  useEffect(() => {
+    if (!sessions.length) return;
+    
+    const now = new Date();
+    
+    let filtered = [...sessions];
+    if (activeFilter === 'upcoming') {
+      filtered = sessions.filter(session => {
+        const startTime = new Date(session.start_time);
+        return startTime > now;
+      });
+    } else if (activeFilter === 'active') {
+      filtered = sessions.filter(session => {
+        const startTime = new Date(session.start_time);
+        const endTime = new Date(session.end_time);
+        return startTime <= now && endTime >= now;
+      });
+    } else if (activeFilter === 'past') {
+      filtered = sessions.filter(session => {
+        const endTime = new Date(session.end_time);
+        return endTime < now;
+      });
+    }
+    
+    setFilteredSessions(filtered);
+  }, [sessions, activeFilter]);
   
   useEffect(() => {
     async function fetchSessions() {
@@ -46,6 +78,7 @@ export default function SessionsPage() {
         }
         
         setSessions(data || []);
+        setFilteredSessions(data || []);
       } catch (error: any) {
         console.error('Error fetching sessions:', error);
         setError(error.message);
@@ -66,12 +99,78 @@ export default function SessionsPage() {
     }
   };
   
+  // Function to determine status badge based on date and teams URL status
+  const getSessionStatus = (session: Session) => {
+    const now = new Date();
+    const startTime = new Date(session.start_time);
+    const endTime = new Date(session.end_time);
+    
+    if (session.teams_error) {
+      return { 
+        label: 'Error', 
+        style: 'border-transparent bg-red-100 text-red-800 hover:bg-red-200'
+      };
+    }
+    
+    if (now < startTime) {
+      return { 
+        label: 'Upcoming', 
+        style: 'border-transparent bg-indigo-100 text-indigo-800 hover:bg-indigo-200'
+      };
+    } else if (now >= startTime && now <= endTime) {
+      return { 
+        label: 'In Progress', 
+        style: 'border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+      };
+    } else {
+      return { 
+        label: 'Completed', 
+        style: 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-200'
+      };
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Sessions</h1>
+        <h1 className="text-2xl font-bold">Webinars</h1>
         <Button onClick={() => router.push('/dashboard/sessions/create')}>
-          Create New Session
+          Create New Webinar
+        </Button>
+      </div>
+      
+      <div className="flex items-center space-x-2 mb-6">
+        <Button
+          variant={activeFilter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveFilter('all')}
+          className="rounded-full"
+        >
+          All
+        </Button>
+        <Button
+          variant={activeFilter === 'upcoming' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveFilter('upcoming')}
+          className="rounded-full"
+        >
+          Upcoming
+        </Button>
+        <Button
+          variant={activeFilter === 'active' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveFilter('active')}
+          className="rounded-full"
+        >
+          Current
+        </Button>
+        <Button
+          variant={activeFilter === 'past' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveFilter('past')}
+          className="rounded-full"
+        >
+          Past
         </Button>
       </div>
       
@@ -82,95 +181,113 @@ export default function SessionsPage() {
       )}
       
       {loading ? (
-        <p>Loading sessions...</p>
+        <p>Loading Webinars...</p>
       ) : sessions.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p>No sessions found. Create your first session to get started.</p>
+            <p>No webinars found. Create your first Webinar to get started.</p>
+          </CardContent>
+        </Card>
+      ) : filteredSessions.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p>No {activeFilter} webinars found.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {sessions.map((session) => (
-            <Card key={session.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl">{session.title}</CardTitle>
-                  <div className="flex space-x-2">
-                    {session.is_online && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                        Online
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">Start:</span> {formatDate(session.start_time)}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">End:</span> {formatDate(session.end_time)}
-                  </div>
-                  
-                  {session.description && (
-                    <div className="text-sm mt-2">
-                      <p>{session.description}</p>
+        <div className="rounded-md border">
+          <div className="relative w-full overflow-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    <div className="flex items-center space-x-2">
+                      <input type="checkbox" className="rounded border-gray-300" />
+                      <span>Webinar Title</span>
                     </div>
-                  )}
-                  
-                  {session.is_online ? (
-                    <div className="mt-4">
-                      {session.teams_join_url ? (
-                        <div>
-                          <p className="text-sm font-medium mb-1">Teams Meeting:</p>
-                          <a 
-                            href={session.teams_join_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            Join Teams Meeting
-                          </a>
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Date</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Type</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Attendees</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground"></th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {filteredSessions.map((session) => {
+                  const status = getSessionStatus(session);
+                  return (
+                    <tr 
+                      key={session.id} 
+                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                    >
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center space-x-2">
+                          <input type="checkbox" className="rounded border-gray-300" />
+                          <span className="font-medium">{session.title}</span>
                         </div>
-                      ) : session.teams_error ? (
-                        <Alert className="bg-red-50 border-red-200 mt-2">
-                          <AlertDescription className="text-sm">
-                            Error creating Teams meeting: {session.teams_error}
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <p className="text-sm text-yellow-600">Teams meeting is being created...</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-sm mt-2">
-                      <span className="font-medium">Location:</span> {session.location || 'No location specified'}
-                    </div>
-                  )}
-                  
-                  <div className="flex space-x-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/sessions/${session.id}`)}
-                    >
-                      View Details
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/sessions/${session.id}/edit`)}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex flex-col">
+                          <span>{formatDate(session.start_time)}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle">
+                        {session.is_online ? (
+                          <Badge className="border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200">
+                            Online
+                          </Badge>
+                        ) : (
+                          <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-200">
+                            In-person
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="p-4 align-middle">
+                        {/* Placeholder for attendee count - would need to be added to your data model */}
+                        <span>-</span>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <Badge className={status.style}>
+                          {status.label}
+                        </Badge>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/sessions/${session.id}`)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <span className="sr-only">View details</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/sessions/${session.id}/edit`)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <span className="sr-only">Edit</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <span className="sr-only">More options</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

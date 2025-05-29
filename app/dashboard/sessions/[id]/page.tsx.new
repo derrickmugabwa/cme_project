@@ -1,0 +1,302 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { format } from 'date-fns';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+interface Session {
+  id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  is_online: boolean;
+  teams_join_url: string;
+  teams_meeting_id: string;
+  teams_calendar_event_id: string;
+  teams_recording_url: string;
+  teams_error: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Attendance {
+  id: string;
+  student_id: string;
+  student: {
+    full_name: string;
+    email: string;
+  };
+  teams_verified: boolean;
+  teams_join_time: string;
+  teams_leave_time: string;
+  teams_duration_minutes: number;
+  verification_method: string;
+}
+
+// Create a client component that receives the sessionId as a prop
+function SessionDetailClient({ sessionId }: { sessionId: string }) {
+  const router = useRouter();
+  const [session, setSession] = useState<Session | null>(null);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  
+  useEffect(() => {
+    async function fetchSessionDetails() {
+      try {
+        // Fetch session details
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+        
+        setSession(sessionData);
+        
+        // Fetch attendance for this session
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('attendance')
+          .select('*, student:profiles(full_name, email)')
+          .eq('session_id', sessionId);
+        
+        if (attendanceError) {
+          console.error('Error fetching attendance:', attendanceError);
+        } else {
+          setAttendance(attendanceData || []);
+        }
+      } catch (error: any) {
+        console.error('Error fetching session details:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchSessionDetails();
+  }, [sessionId]);
+  
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'EEEE, MMMM d, yyyy h:mm a');
+    } catch (error) {
+      return dateString;
+    }
+  };
+  
+  // Handle session deletion
+  const handleDelete = async () => {
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
+    
+    try {
+      setDeleting(true);
+      
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete session');
+      }
+      
+      router.push('/dashboard/sessions');
+    } catch (error: any) {
+      console.error('Error deleting session:', error);
+      setError(error.message);
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  };
+  
+  if (loading) {
+    return <p>Loading webinar details...</p>;
+  }
+  
+  if (error) {
+    return (
+      <Alert className="bg-red-50 border-red-200 mb-4">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+  
+  if (!session) {
+    return <p>Webinar not found</p>;
+  }
+  
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{session.title}</h1>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push(`/dashboard/sessions/${sessionId}/edit`)}
+          >
+            Edit Webinar
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
+          </Button>
+        </div>
+      </div>
+      
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-xl">Webinar Details</CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="font-medium">Start Time</h3>
+              <p>{formatDate(session.start_time)}</p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium">End Time</h3>
+              <p>{formatDate(session.end_time)}</p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium">Webinar Type</h3>
+              <div className="flex items-center mt-1">
+                {session.is_online ? (
+                  <Badge className="bg-blue-100 text-blue-800">Online (Teams)</Badge>
+                ) : (
+                  <Badge className="bg-green-100 text-green-800">In-Person</Badge>
+                )}
+              </div>
+            </div>
+            
+            {!session.is_online && (
+              <div>
+                <h3 className="font-medium">Location</h3>
+                <p>{session.location || 'No location specified'}</p>
+              </div>
+            )}
+            
+            {session.is_online && (
+              <div>
+                <h3 className="font-medium">Teams Meeting</h3>
+                {session.teams_join_url ? (
+                  <a 
+                    href={session.teams_join_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Join Teams Meeting
+                  </a>
+                ) : session.teams_error ? (
+                  <p className="text-red-600">{session.teams_error}</p>
+                ) : (
+                  <p className="text-yellow-600">Teams meeting is being created...</p>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {session.description && (
+            <div className="mt-4">
+              <h3 className="font-medium">Description</h3>
+              <p className="mt-1">{session.description}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {attendance.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Attendance</CardTitle>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="py-3 px-4 text-left font-medium">Student</th>
+                    <th className="py-3 px-4 text-left font-medium">Email</th>
+                    {session.is_online && (
+                      <>
+                        <th className="py-3 px-4 text-left font-medium">Teams Verified</th>
+                        <th className="py-3 px-4 text-left font-medium">Join Time</th>
+                        <th className="py-3 px-4 text-left font-medium">Leave Time</th>
+                        <th className="py-3 px-4 text-left font-medium">Duration</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {attendance.map((record) => (
+                    <tr key={record.id}>
+                      <td className="py-2 px-4">{record.student?.full_name || 'Unknown'}</td>
+                      <td className="py-2 px-4">{record.student?.email || 'Unknown'}</td>
+                      {session.is_online && (
+                        <>
+                          <td className="py-2 px-4">
+                            {record.teams_verified ? (
+                              <Badge className="bg-green-100 text-green-800">Verified</Badge>
+                            ) : (
+                              <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                            )}
+                          </td>
+                          <td className="py-2 px-4">
+                            {record.teams_join_time ? formatDate(record.teams_join_time) : 'N/A'}
+                          </td>
+                          <td className="py-2 px-4">
+                            {record.teams_leave_time ? formatDate(record.teams_leave_time) : 'N/A'}
+                          </td>
+                          <td className="py-2 px-4">
+                            {record.teams_duration_minutes ? `${record.teams_duration_minutes} min` : 'N/A'}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// This is the page component that receives the params from the URL
+export default function SessionDetailPage({ params }: { params: { id: string } }) {
+  const sessionId = params.id;
+  
+  return <SessionDetailClient sessionId={sessionId} />;
+}

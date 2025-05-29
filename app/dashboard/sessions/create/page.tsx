@@ -10,11 +10,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Video, MessageSquare, Calendar, Clock } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import { format, setHours, setMinutes, addHours } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 // Supabase client will be initialized in the component
 
 export default function CreateSessionPage() {
   const router = useRouter();
+  const { toast } = useToast();
   
   // State for Microsoft authentication
   const [hasMicrosoftAuth, setHasMicrosoftAuth] = useState<boolean | null>(null);
@@ -23,19 +30,16 @@ export default function CreateSessionPage() {
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [isOnline, setIsOnline] = useState(false);
+  const [startDateTime, setStartDateTime] = useState<Date | null>(null);
+  const [endDateTime, setEndDateTime] = useState<Date | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState('');
-  const [courseId, setCourseId] = useState('');
-  const [courses, setCourses] = useState<any[]>([]);
+  const [onlineProvider, setOnlineProvider] = useState<'teams' | 'zoom' | 'google-meet'>('teams');
+  const [manualMeetingLink, setManualMeetingLink] = useState('');
+  const [useManualLink, setUseManualLink] = useState(false);
   
   // UI state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   
   // Check Microsoft auth status
   useEffect(() => {
@@ -96,25 +100,7 @@ export default function CreateSessionPage() {
       }
     }
     
-    // Load courses
-    async function loadCourses() {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from('courses')
-          .select('id, title')
-          .eq('is_active', true);
-        
-        if (data) {
-          setCourses(data);
-        }
-      } catch (error) {
-        console.error('Error loading courses:', error);
-      }
-    }
-    
     checkMicrosoftAuth();
-    loadCourses();
   }, []);
   
   // Form submission
@@ -123,29 +109,77 @@ export default function CreateSessionPage() {
     
     try {
       setLoading(true);
-      setError(null);
       
       // Validate form data
-      if (!title || !startDate || !startTime || !endDate || !endTime) {
-        throw new Error('Please fill in all required fields');
+      if (!title || !startDateTime || !endDateTime) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Please fill in all required fields"
+        });
+        return;
       }
-      
-      // Create start and end datetime objects
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${endDate}T${endTime}`);
       
       // Validate dates
-      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-        throw new Error('Invalid date or time format');
-      }
-      
       if (endDateTime <= startDateTime) {
-        throw new Error('End time must be after start time');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "End time must be after start time"
+        });
+        return;
       }
       
-      // Check if online and Microsoft account is connected
-      if (isOnline && !hasMicrosoftAuth) {
-        throw new Error('You must connect your Microsoft account to create online sessions');
+      // Check if online and provider is Teams and Microsoft account is connected
+      if (isOnline && onlineProvider === 'teams' && !hasMicrosoftAuth && !useManualLink) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "You must connect your Microsoft account or add a meeting link manually to create Teams webinars"
+        });
+        return;
+      }
+      
+      // Validate manual meeting link if provided
+      if (isOnline && useManualLink && !manualMeetingLink) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Please enter a ${onlineProvider === 'teams' ? 'Teams' : onlineProvider === 'zoom' ? 'Zoom' : 'Google Meet'} meeting link`
+        });
+        return;
+      }
+      
+      // Validate manual meeting link format if provided
+      if (isOnline && useManualLink && manualMeetingLink) {
+        // Validate link format based on provider
+        if (onlineProvider === 'teams' && !manualMeetingLink.includes('teams.microsoft.com')) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please enter a valid Microsoft Teams meeting link"
+          });
+          return;
+        } else if (onlineProvider === 'zoom' && !manualMeetingLink.includes('zoom.us')) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please enter a valid Zoom meeting link"
+          });
+          return;
+        } else if (onlineProvider === 'google-meet' && !manualMeetingLink.includes('meet.google.com')) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please enter a valid Google Meet link"
+          });
+          return;
+        }
+      }
+      
+      // For Zoom and Google Meet, we'll implement the integration later
+      if (isOnline && (onlineProvider === 'zoom' || onlineProvider === 'google-meet')) {
+        console.log(`${onlineProvider} integration will be implemented later`);
       }
       
       // Prepare session data
@@ -156,7 +190,8 @@ export default function CreateSessionPage() {
         end_time: endDateTime.toISOString(),
         location: isOnline ? null : location,
         is_online: isOnline,
-        course_id: courseId || null
+        online_provider: isOnline ? onlineProvider : null,
+        teams_join_url: isOnline && useManualLink ? manualMeetingLink : null
       };
       
       // Call API to create session
@@ -169,22 +204,38 @@ export default function CreateSessionPage() {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create session');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error || "Failed to create webinar"
+        });
+        return;
       }
       
       // Check for Teams error
       if (result.teamsError) {
-        setError(`Session created, but Teams meeting creation failed: ${result.teamsError}`);
-        setSuccess(true);
+        toast({
+          variant: "default",
+          title: "Webinar Created",
+          description: `Webinar created, but Teams meeting creation failed: ${result.teamsError}`
+        });
       } else {
-        setSuccess(true);
-        // Redirect to session details or list after a short delay
-        setTimeout(() => {
-          router.push('/dashboard/sessions');
-        }, 2000);
+        toast({
+          title: "Success",
+          description: "Webinar created successfully!"
+        });
       }
+      
+      // Redirect to session details or list after a short delay
+      setTimeout(() => {
+        router.push('/dashboard/sessions');
+      }, 2000);
     } catch (error: any) {
-      setError(error.message);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "An unexpected error occurred"
+      });
     } finally {
       setLoading(false);
     }
@@ -192,8 +243,9 @@ export default function CreateSessionPage() {
   
   return (
     <div className="container mx-auto py-6">
+      <Toaster />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Create CME Session</h1>
+        <h1 className="text-2xl font-bold">Create Webinar</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => router.push('/dashboard/sessions')} className="px-4">
             Discard
@@ -201,20 +253,20 @@ export default function CreateSessionPage() {
           <Button 
             type="submit" 
             form="session-form"
-            disabled={loading || (isOnline && hasMicrosoftAuth === false)}
+            disabled={loading || (isOnline && onlineProvider === 'teams' && hasMicrosoftAuth === false && !useManualLink)}
             className="px-4"
           >
-            {loading ? 'Creating...' : 'Create Session'}
+            {loading ? 'Creating...' : 'Create Webinar'}
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Session Details */}
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Webinar Details */}
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Session Details</CardTitle>
+              <CardTitle>Webinar Details</CardTitle>
             </CardHeader>
             <CardContent>
               <form id="session-form" onSubmit={handleSubmit} className="space-y-6">
@@ -225,30 +277,13 @@ export default function CreateSessionPage() {
                       id="title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Session Title"
+                      placeholder="Webinar Title"
                       required
                       className="mt-1"
                     />
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="course">Course</Label>
-                      <select
-                        id="course"
-                        value={courseId}
-                        onChange={(e) => setCourseId(e.target.value)}
-                        className="w-full p-2 border rounded-md mt-1"
-                      >
-                        <option value="">Select a course</option>
-                        {courses.map((course) => (
-                          <option key={course.id} value={course.id}>
-                            {course.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  {/* Course selection removed */}
                   
                   <div>
                     <Label htmlFor="description">Description (Optional)</Label>
@@ -269,59 +304,64 @@ export default function CreateSessionPage() {
           {/* Session Schedule */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Session Schedule</CardTitle>
+              <CardTitle>Webinar Schedule</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="startDate">Start Date</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="startTime">Start Time</Label>
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      required
-                      className="mt-1"
-                    />
+              <div className="space-y-6">
+                <div>
+                  <Label htmlFor="startDateTime">Start Date & Time</Label>
+                  <div className="relative mt-1">
+                    <div className="flex items-center border rounded-md overflow-hidden">
+                      <div className="flex-grow">
+                        <DatePicker
+                          selected={startDateTime}
+                          onChange={(date) => {
+                            setStartDateTime(date);
+                            // If end date is not set or is before start date, set it to start date + 1 hour
+                            if (!endDateTime || (date && endDateTime < date)) {
+                              setEndDateTime(date ? addHours(date, 1) : null);
+                            }
+                          }}
+                          showTimeSelect
+                          timeFormat="HH:mm"
+                          timeIntervals={15}
+                          dateFormat="MMMM d, yyyy h:mm aa"
+                          placeholderText="Select start date and time"
+                          className="w-full p-2 border-0 focus:ring-0 focus:outline-none"
+                          required
+                          minDate={new Date()}
+                        />
+                      </div>
+                      <div className="p-2 bg-gray-50 border-l">
+                        <Calendar className="h-5 w-5 text-gray-500" />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="endDate">End Date</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="endTime">End Time</Label>
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      required
-                      className="mt-1"
-                    />
+                <div>
+                  <Label htmlFor="endDateTime">End Date & Time</Label>
+                  <div className="relative mt-1">
+                    <div className="flex items-center border rounded-md overflow-hidden">
+                      <div className="flex-grow">
+                        <DatePicker
+                          selected={endDateTime}
+                          onChange={(date) => setEndDateTime(date)}
+                          showTimeSelect
+                          timeFormat="HH:mm"
+                          timeIntervals={15}
+                          dateFormat="MMMM d, yyyy h:mm aa"
+                          placeholderText="Select end date and time"
+                          className="w-full p-2 border-0 focus:ring-0 focus:outline-none"
+                          required
+                          minDate={startDateTime || new Date()}
+                          disabled={!startDateTime}
+                        />
+                      </div>
+                      <div className="p-2 bg-gray-50 border-l">
+                        <Clock className="h-5 w-5 text-gray-500" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -330,7 +370,7 @@ export default function CreateSessionPage() {
         </div>
         
         {/* Right Sidebar */}
-        <div className="space-y-6">
+        <div className="lg:col-span-1 space-y-6">
           {/* Location Type */}
           <Card>
             <CardHeader>
@@ -343,28 +383,97 @@ export default function CreateSessionPage() {
                   checked={isOnline}
                   onCheckedChange={setIsOnline}
                 />
-                <Label htmlFor="isOnline">Online Session (Microsoft Teams)</Label>
+                <Label htmlFor="isOnline">Online Webinar</Label>
               </div>
               
-              {isOnline && !checkingAuth && (
+              {isOnline && (
+                <div className="mt-4">
+                  <Label className="mb-2 block">Select Online Meeting Provider</Label>
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    <div 
+                      onClick={() => setOnlineProvider('teams')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg cursor-pointer border-2 transition-all ${onlineProvider === 'teams' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="w-12 h-12 bg-[#4b53bc] text-white rounded-md flex items-center justify-center mb-2">
+                        <Video className="w-6 h-6" />
+                      </div>
+                      <span className="text-sm font-medium">Teams</span>
+                      <span className="text-xs text-gray-500 invisible">Placeholder</span>
+                    </div>
+                    
+                    <div 
+                      onClick={() => setOnlineProvider('zoom')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg cursor-pointer border-2 transition-all ${onlineProvider === 'zoom' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="w-12 h-12 bg-[#2d8cff] text-white rounded-md flex items-center justify-center mb-2">
+                        <Video className="w-6 h-6" />
+                      </div>
+                      <span className="text-sm font-medium">Zoom</span>
+                      <span className="text-xs text-gray-500">(Coming Soon)</span>
+                    </div>
+                    
+                    <div 
+                      onClick={() => setOnlineProvider('google-meet')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg cursor-pointer border-2 transition-all ${onlineProvider === 'google-meet' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="w-12 h-12 bg-[#00897b] text-white rounded-md flex items-center justify-center mb-2">
+                        <MessageSquare className="w-6 h-6" />
+                      </div>
+                      <span className="text-sm font-medium">Google Meet</span>
+                      <span className="text-xs text-gray-500">(Coming Soon)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {isOnline && onlineProvider === 'teams' && !checkingAuth && (
                 <>
                   {hasMicrosoftAuth === false && (
-                    <Alert className="bg-yellow-50 border-yellow-200 mt-4">
-                      <div className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        <AlertTitle>Microsoft Account Not Connected</AlertTitle>
+                    <div className="space-y-4 mt-4">
+                      <Alert className="bg-yellow-50 border-yellow-200">
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                          <AlertTitle>Microsoft Account Not Connected</AlertTitle>
+                        </div>
+                        <AlertDescription>
+                          <p className="mb-2">You need to connect your Microsoft account to automatically create Teams meetings.</p>
+                          <Button 
+                            variant="link" 
+                            onClick={() => router.push('/dashboard/microsoft-connect')}
+                            className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
+                          >
+                            Connect Microsoft Account
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <Switch
+                            id="useManualLink"
+                            checked={useManualLink}
+                            onCheckedChange={setUseManualLink}
+                          />
+                          <Label htmlFor="useManualLink">Add meeting link manually</Label>
+                        </div>
+                        
+                        {useManualLink && (
+                          <div>
+                            <Label htmlFor="manualMeetingLink">Teams Meeting Link</Label>
+                            <Input
+                              id="manualMeetingLink"
+                              value={manualMeetingLink}
+                              onChange={(e) => setManualMeetingLink(e.target.value)}
+                              placeholder="https://teams.microsoft.com/l/meetup-join/..."
+                              className="mt-1"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Enter a valid Microsoft Teams meeting link. This will be used for attendees to join the webinar.
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <AlertDescription>
-                        You need to connect your Microsoft account to create Teams meetings.
-                        <Button 
-                          variant="link" 
-                          onClick={() => router.push('/dashboard/microsoft-connect')}
-                          className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
-                        >
-                          Connect Microsoft Account
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
+                    </div>
                   )}
                   {hasMicrosoftAuth === true && (
                     <Alert className="bg-green-50 border-green-200 mt-4">
@@ -378,6 +487,47 @@ export default function CreateSessionPage() {
                     </Alert>
                   )}
                 </>
+              )}
+              
+              {isOnline && (onlineProvider === 'zoom' || onlineProvider === 'google-meet') && (
+                <div className="space-y-4 mt-4">
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-500" />
+                      <AlertTitle>{onlineProvider === 'zoom' ? 'Zoom' : 'Google Meet'} Integration</AlertTitle>
+                    </div>
+                    <AlertDescription>
+                      <p className="mb-2">{onlineProvider === 'zoom' ? 'Zoom' : 'Google Meet'} integration will be available soon. For now, you can add the meeting link manually.</p>
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Switch
+                        id="useManualLink"
+                        checked={useManualLink}
+                        onCheckedChange={setUseManualLink}
+                      />
+                      <Label htmlFor="useManualLink">Add meeting link manually</Label>
+                    </div>
+                    
+                    {useManualLink && (
+                      <div>
+                        <Label htmlFor="manualMeetingLink">{onlineProvider === 'zoom' ? 'Zoom' : 'Google Meet'} Meeting Link</Label>
+                        <Input
+                          id="manualMeetingLink"
+                          value={manualMeetingLink}
+                          onChange={(e) => setManualMeetingLink(e.target.value)}
+                          placeholder={onlineProvider === 'zoom' ? "https://zoom.us/j/..." : "https://meet.google.com/..."}
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Enter a valid {onlineProvider === 'zoom' ? 'Zoom' : 'Google Meet'} meeting link. This will be used for attendees to join the webinar.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
               
               {!isOnline && (
@@ -395,35 +545,7 @@ export default function CreateSessionPage() {
             </CardContent>
           </Card>
           
-          {/* Status Messages */}
-          {(error || success) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {error && (
-                  <Alert className="bg-red-50 border-red-200">
-                    <div className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                      <AlertTitle>Error</AlertTitle>
-                    </div>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                {success && (
-                  <Alert className="bg-green-50 border-green-200">
-                    <div className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                      <AlertTitle>Success</AlertTitle>
-                    </div>
-                    <AlertDescription>Session created successfully!</AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Toast notifications will appear here */}
         </div>
       </div>
     </div>

@@ -31,6 +31,8 @@ interface Session {
 }
 
 export default function EditSessionPage({ params }: { params: { id: string } }) {
+  // Store the ID in a variable to avoid direct access warnings
+  const sessionId = params.id;
   const router = useRouter();
   
   // State for Microsoft authentication
@@ -65,7 +67,7 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
         const { data: session, error: sessionError } = await supabase
           .from('sessions')
           .select('*')
-          .eq('id', params.id)
+          .eq('id', sessionId)
           .single();
         
         if (sessionError) {
@@ -128,7 +130,7 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
     }
     
     loadSessionData();
-  }, [params.id]);
+  }, [sessionId]);
   
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,7 +175,7 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
       };
       
       // Call API to update session
-      const response = await fetch(`/api/sessions/${params.id}`, {
+      const response = await fetch(`/api/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sessionData),
@@ -193,7 +195,7 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
         setSuccess(true);
         // Redirect to session details after a short delay
         setTimeout(() => {
-          router.push(`/dashboard/sessions/${params.id}`);
+          router.push(`/dashboard/sessions/${sessionId}`);
         }, 2000);
       }
     } catch (error: any) {
@@ -370,7 +372,7 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => router.push(`/dashboard/sessions/${params.id}`)}
+                  onClick={() => router.push(`/dashboard/sessions/${sessionId}`)}
                 >
                   Cancel
                 </Button>
