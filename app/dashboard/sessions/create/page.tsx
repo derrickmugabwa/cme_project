@@ -177,60 +177,115 @@ export default function CreateSessionPage() {
         }
       }
       
-      // For Zoom and Google Meet, we'll implement the integration later
-      if (isOnline && (onlineProvider === 'zoom' || onlineProvider === 'google-meet')) {
-        console.log(`${onlineProvider} integration will be implemented later`);
-      }
-      
-      // Prepare session data
-      const sessionData = {
+      // Prepare base session data
+      const baseSessionData = {
         title,
         description,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         location: isOnline ? null : location,
-        is_online: isOnline,
-        online_provider: isOnline ? onlineProvider : null,
-        teams_join_url: isOnline && useManualLink ? manualMeetingLink : null
+        is_online: isOnline
       };
       
-      // Call API to create session
-      const response = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sessionData),
-      });
+      let response;
       
-      const result = await response.json();
-      
-      if (!response.ok) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: result.error || "Failed to create webinar"
-        });
-        return;
-      }
-      
-      // Check for Teams error
-      if (result.teamsError) {
-        toast({
-          variant: "default",
-          title: "Webinar Created",
-          description: `Webinar created, but Teams meeting creation failed: ${result.teamsError}`
-        });
+      // Use different API endpoints based on the selected provider
+      if (isOnline) {
+        if (onlineProvider === 'teams') {
+          if (useManualLink) {
+            // For Teams meetings with manual link
+            const teamsManualSessionData = {
+              ...baseSessionData,
+              teams_join_url: manualMeetingLink
+            };
+            
+            // Call Teams manual API endpoint
+            response = await fetch('/api/sessions/teams-manual', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(teamsManualSessionData),
+            });
+          } else {
+            // For Teams meetings with integration
+            const teamsSessionData = {
+              ...baseSessionData,
+              online_provider: 'teams'
+            };
+            
+            // Call Teams API endpoint with integration
+            response = await fetch('/api/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(teamsSessionData),
+            });
+          }
+        } 
+        else if (onlineProvider === 'zoom') {
+          // For Zoom meetings
+          const zoomSessionData = {
+            ...baseSessionData,
+            zoom_join_url: manualMeetingLink
+          };
+          
+          // Call Zoom API endpoint
+          response = await fetch('/api/sessions/zoom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(zoomSessionData),
+          });
+        } 
+        else if (onlineProvider === 'google-meet') {
+          // For Google Meet meetings
+          const googleMeetSessionData = {
+            ...baseSessionData,
+            google_meet_url: manualMeetingLink
+          };
+          
+          // Call Google Meet API endpoint
+          response = await fetch('/api/sessions/google-meet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(googleMeetSessionData),
+          });
+        }
       } else {
-        toast({
-          title: "Success",
-          description: "Webinar created successfully!"
+        // For in-person sessions
+        response = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(baseSessionData),
         });
       }
-      
-      // Redirect to session details or list after a short delay
-      setTimeout(() => {
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: result.error || "Failed to create webinar"
+          });
+          return;
+        }
+        
+        // Check for Teams error
+        if (result.teamsError) {
+          toast({
+            variant: "default",
+            title: "Webinar Created",
+            description: `Webinar created, but Teams meeting creation failed: ${result.teamsError}`
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Webinar created successfully!"
+          });
+        }
+        
+        // Redirect to session list
         router.push('/dashboard/sessions');
-      }, 2000);
     } catch (error: any) {
+      console.error('Error creating session:', error);
       toast({
         variant: "destructive",
         title: "Error",
