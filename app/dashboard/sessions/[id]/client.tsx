@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Session {
   id: string;
@@ -52,6 +55,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   
   useEffect(() => {
     async function fetchWebinarDetails() {
@@ -124,6 +128,59 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
     }
   };
   
+  // Open the join meeting confirmation dialog
+  const openJoinDialog = () => {
+    setJoinDialogOpen(true);
+  };
+
+  // Handle joining the meeting and recording attendance
+  const handleJoinMeeting = async () => {
+    try {
+      setJoinDialogOpen(false);
+      
+      // Record attendance check-in
+      const response = await fetch('/api/attendance/check-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          sessionId: sessionId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to record attendance');
+      }
+      
+      // Show success message
+      toast({
+        title: 'Attendance Recorded',
+        description: 'Your attendance has been recorded and is pending approval',
+        variant: 'default',
+      });
+      
+      // Open meeting URL
+      if (session && session.teams_join_url) {
+        window.open(session.teams_join_url, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error recording attendance:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to record attendance',
+        variant: 'destructive',
+      });
+      
+      // Still open the meeting URL even if attendance recording fails
+      if (session && session.teams_join_url) {
+        window.open(session.teams_join_url, '_blank');
+      }
+    }
+  };
+
   // Handle webinar deletion
   const handleDelete = async () => {
     if (!deleteConfirm) {
@@ -187,6 +244,35 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   
   return (
     <div className="container mx-auto py-6">
+      <Toaster />
+      
+      {/* Join Meeting Confirmation Dialog */}
+      <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Attendance</DialogTitle>
+            <DialogDescription>
+              By joining this meeting, your attendance will be recorded and will require approval from an administrator or faculty member.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-500">
+              Once you click "Join Meeting", the system will:
+            </p>
+            <ul className="list-disc pl-5 mt-2 text-sm text-gray-500 space-y-1">
+              <li>Record your attendance for this webinar session</li>
+              <li>Set your attendance status as "pending approval"</li>
+              <li>Open the meeting link in a new tab</li>
+            </ul>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setJoinDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleJoinMeeting}>Join Meeting</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
           <button
@@ -270,14 +356,12 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                         </svg>
-                        <a 
-                          href={session.teams_join_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <button 
+                          onClick={openJoinDialog}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           Join Meeting
-                        </a>
+                        </button>
                       </div>
                     ) : session.teams_error ? (
                       <p className="text-red-600 flex items-center">
@@ -382,7 +466,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               </div>
               
               <div className="flex flex-col items-center">
-                {new Date() >= new Date(session.start_time) && new Date() <= new Date(session.end_time) ? (
+                {session && new Date() >= new Date(session.start_time) && new Date() <= new Date(session.end_time) ? (
                   <>
                     <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -413,7 +497,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               </div>
               
               <div className="flex flex-col items-center">
-                {new Date() > new Date(session.end_time) ? (
+                {session && new Date() > new Date(session.end_time) ? (
                   <>
                     <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -18,8 +18,6 @@ interface UserDashboardProps {
 function WebinarSessionsList({ userId }: { userId: string }) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enrollments, setEnrollments] = useState<Record<string, boolean>>({});
-  const [enrollingSession, setEnrollingSession] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchSessions = async () => {
@@ -36,22 +34,7 @@ function WebinarSessionsList({ userId }: { userId: string }) {
           
         if (sessionsError) throw sessionsError;
         
-        // Fetch user's enrollments
-        const { data: enrollmentsData, error: enrollmentsError } = await supabase
-          .from('enrollments')
-          .select('course_id, status')
-          .eq('student_id', userId);
-          
-        if (enrollmentsError) throw enrollmentsError;
-        
-        // Create a map of course_id to enrollment status
-        const enrollmentMap: Record<string, boolean> = {};
-        enrollmentsData?.forEach(enrollment => {
-          enrollmentMap[enrollment.course_id] = true;
-        });
-        
         setSessions(sessionsData || []);
-        setEnrollments(enrollmentMap);
       } catch (error) {
         console.error('Error fetching sessions:', error);
       } finally {
@@ -63,55 +46,6 @@ function WebinarSessionsList({ userId }: { userId: string }) {
       fetchSessions();
     }
   }, [userId]);
-  
-  const handleEnroll = async (sessionId: string) => {
-    if (!userId) {
-      toast.error('You must be logged in to enroll');
-      return;
-    }
-    
-    try {
-      setEnrollingSession(sessionId);
-      const supabase = createClient();
-      
-      // Find the session to get its course_id
-      const session = sessions.find(s => s.id === sessionId);
-      if (!session) {
-        toast.error('Session not found');
-        return;
-      }
-      
-      // Check if already enrolled
-      if (enrollments[session.course_id]) {
-        toast.error('You are already enrolled in this course');
-        return;
-      }
-      
-      // Create enrollment record
-      const { error } = await supabase
-        .from('enrollments')
-        .insert({
-          student_id: userId,
-          course_id: session.course_id,
-          status: 'enrolled'
-        });
-        
-      if (error) throw error;
-      
-      // Update local state
-      setEnrollments({
-        ...enrollments,
-        [session.course_id]: true
-      });
-      
-      toast.success('Successfully enrolled in the session');
-    } catch (error) {
-      console.error('Error enrolling in session:', error);
-      toast.error('Failed to enroll in the session');
-    } finally {
-      setEnrollingSession(null);
-    }
-  };
   
   if (loading) {
     return (
@@ -136,8 +70,6 @@ function WebinarSessionsList({ userId }: { userId: string }) {
   return (
     <div className="space-y-4">
       {sessions.map(session => {
-        const isEnrolled = enrollments[session.course_id];
-        const isEnrolling = enrollingSession === session.id;
         const startTime = new Date(session.start_time);
         const endTime = new Date(session.end_time);
         
@@ -165,27 +97,12 @@ function WebinarSessionsList({ userId }: { userId: string }) {
               </div>
             </div>
             <div className="flex-shrink-0">
-              {isEnrolled ? (
-                <Button variant="outline" className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200" disabled>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Enrolled
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => handleEnroll(session.id)}
-                  disabled={isEnrolling}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  {isEnrolling ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      Enrolling...
-                    </>
-                  ) : (
-                    <>Enroll Now</>
-                  )}
-                </Button>
-              )}
+              <Button 
+                onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                View Details
+              </Button>
             </div>
           </div>
         );
