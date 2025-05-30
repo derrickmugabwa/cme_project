@@ -75,7 +75,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
         if (userRole === 'faculty') {
           // Faculty can see their own content
           query = query.eq('faculty_id', userId)
-        } else if (userRole === 'student') {
+        } else if (userRole === 'user') {
           // Students can see all published content
           query = query.eq('is_published', true)
         }

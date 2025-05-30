@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Session {
   id: string;
@@ -36,6 +31,7 @@ export default function SessionsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   
   // Apply filters to sessions based on the active filter
   useEffect(() => {
@@ -66,28 +62,47 @@ export default function SessionsPage() {
   }, [sessions, activeFilter]);
   
   useEffect(() => {
-    async function fetchSessions() {
+    async function fetchData() {
+      const supabase = createClient();
+      setLoading(true);
+      
       try {
-        const { data, error } = await supabase
+        // Fetch user profile to get role
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profileData) {
+            setUserRole(profileData.role);
+          }
+        }
+        
+        // Fetch sessions
+        const { data: sessionsData, error: sessionsError } = await supabase
           .from('sessions')
           .select('*')
           .order('start_time', { ascending: true });
         
-        if (error) {
-          throw error;
+        if (sessionsError) {
+          throw sessionsError;
         }
         
-        setSessions(data || []);
-        setFilteredSessions(data || []);
+        setSessions(sessionsData || []);
+        setFilteredSessions(sessionsData || []);
       } catch (error: any) {
-        console.error('Error fetching sessions:', error);
+        console.error('Error fetching data:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     }
     
-    fetchSessions();
+    fetchData();
   }, []);
   
   // Format date for display
@@ -134,9 +149,11 @@ export default function SessionsPage() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Webinars</h1>
-        <Button onClick={() => router.push('/dashboard/sessions/create')}>
-          Create New Webinar
-        </Button>
+        {userRole && userRole !== 'user' && (
+          <Button onClick={() => router.push('/dashboard/sessions/create')}>
+            Create New Webinar
+          </Button>
+        )}
       </div>
       
       <div className="flex items-center space-x-2 mb-6">

@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Session {
   id: string;
@@ -51,6 +46,8 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [creatorName, setCreatorName] = useState<string>('Unknown');
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -60,8 +57,25 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
     async function fetchWebinarDetails() {
       try {
         setLoading(true);
+        const supabase = createClient();
         
-        // Fetch webinar details using Supabase client directly
+        // Get current user session
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+        
+        if (authSession) {
+          // Get current user's role
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authSession.user.id)
+            .single();
+            
+          if (!userError && userData) {
+            setCurrentUserRole(userData.role);
+          }
+        }
+        
+        // Fetch webinar details using Supabase client
         const { data: sessionData, error: sessionError } = await supabase
           .from('sessions')
           .select('*')
@@ -73,6 +87,19 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         }
         
         setSession(sessionData);
+        
+        // Fetch creator's profile information if creator ID exists
+        if (sessionData && sessionData.created_by) {
+          const { data: creatorData, error: creatorError } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', sessionData.created_by)
+            .single();
+            
+          if (!creatorError && creatorData) {
+            setCreatorName(creatorData.full_name);
+          }
+        }
         
         // Fetch attendance records if needed in the future
         // For now, we'll just set an empty array
@@ -249,7 +276,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-800 hover:underline"
                         >
-                          Join Teams Meeting
+                          Join Meeting
                         </a>
                       </div>
                     ) : session.teams_error ? (
@@ -299,7 +326,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               <div className="flex justify-between py-2 border-b">
                 <span>Created By</span>
                 <span className="font-medium">
-                  {session.created_by ? session.created_by.substring(0, 8) : 'Unknown'}
+                  {creatorName}
                 </span>
               </div>
               
@@ -310,16 +337,18 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                 </span>
               </div>
               
-              <div className="mt-6 pt-4 border-t">
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="w-full"
-                >
-                  {deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
-                </Button>
-              </div>
+              {currentUserRole && currentUserRole !== 'user' && (
+                <div className="mt-6 pt-4 border-t">
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="w-full"
+                  >
+                    {deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

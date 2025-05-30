@@ -16,7 +16,7 @@ export interface Database {
           username: string | null
           full_name: string | null
           avatar_url: string | null
-          role: 'student' | 'faculty' | 'admin'
+          role: 'user' | 'faculty' | 'admin'
           email: string
           created_at: string
         }
@@ -26,7 +26,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
-          role?: 'student' | 'faculty' | 'admin'
+          role?: 'user' | 'faculty' | 'admin'
           email: string
           created_at?: string
         }
@@ -36,7 +36,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
-          role?: 'student' | 'faculty' | 'admin'
+          role?: 'user' | 'faculty' | 'admin'
           email?: string
           created_at?: string
         }
@@ -124,7 +124,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      user_role: 'student' | 'faculty' | 'admin'
+      user_role: 'user' | 'faculty' | 'admin'
     }
   }
 }

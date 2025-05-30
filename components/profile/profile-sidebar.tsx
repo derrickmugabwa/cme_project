@@ -8,11 +8,11 @@ interface ProfileSidebarProps {
 
 export function ProfileSidebar({ activeTab, userRole }: ProfileSidebarProps) {
   const tabs = [
-    { id: 'profile', label: 'Profile', href: '/dashboard/profile', roles: ['student', 'faculty', 'admin'] },
-    { id: 'account', label: 'Account', href: '/dashboard/profile/account', roles: ['student', 'faculty', 'admin'] },
-    { id: 'appearance', label: 'Appearance', href: '/dashboard/profile/appearance', roles: ['student', 'faculty', 'admin'] },
-    { id: 'notifications', label: 'Notifications', href: '/dashboard/profile/notifications', roles: ['student', 'faculty', 'admin'] },
-    { id: 'display', label: 'Display', href: '/dashboard/profile/display', roles: ['student', 'faculty', 'admin'] },
+    { id: 'profile', label: 'Profile', href: '/dashboard/profile', roles: ['user', 'faculty', 'admin'] },
+    { id: 'account', label: 'Account', href: '/dashboard/profile/account', roles: ['user', 'faculty', 'admin'] },
+    { id: 'appearance', label: 'Appearance', href: '/dashboard/profile/appearance', roles: ['user', 'faculty', 'admin'] },
+    { id: 'notifications', label: 'Notifications', href: '/dashboard/profile/notifications', roles: ['user', 'faculty', 'admin'] },
+    { id: 'display', label: 'Display', href: '/dashboard/profile/display', roles: ['user', 'faculty', 'admin'] },
   ]
 
   const filteredTabs = tabs.filter(tab => tab.roles.includes(userRole))

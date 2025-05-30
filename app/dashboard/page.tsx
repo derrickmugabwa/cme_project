@@ -5,7 +5,7 @@ import { createClient } from '@/lib/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { redirect } from 'next/navigation'
 import { Database } from '@/lib/database.types'
-import { StudentDashboard } from '@/components/dashboard/student-dashboard'
+import { UserDashboard } from '@/components/dashboard/user-dashboard'
 import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -83,23 +83,17 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 px-3 py-1.5 rounded-full border border-pink-200 dark:border-pink-800">
-            <div className="h-2 w-2 rounded-full bg-pink-500"></div>
-            <span className="text-sm font-medium text-pink-700 dark:text-pink-300">4 of 10 modules completed</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <span className="text-purple-600 text-xs">D</span>
-            </div>
-            <span className="font-medium">Davis</span>
-          </div>
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
         </div>
       </div>
 
 
       
       {/* Role-specific dashboard content */}
-      {profile?.role === 'student' && <StudentDashboard profile={profile} user={user} />}
+      {profile?.role === 'user' && <UserDashboard profile={profile} user={user} />}
       {profile?.role === 'faculty' && <FacultyDashboard profile={profile} user={user} />}
       {profile?.role === 'admin' && <AdminDashboard profile={profile} user={user} />}
     </div>

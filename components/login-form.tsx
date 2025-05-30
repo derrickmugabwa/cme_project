@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -29,16 +30,33 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     setIsLoading(true)
     setError(null)
 
+    // Show loading toast
+    const loadingToast = toast.loading('Logging in...')
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) throw error
+      
+      if (error) {
+        toast.dismiss(loadingToast)
+        toast.error(error.message)
+        setError(error.message)
+        return
+      }
+      
+      // Show success toast
+      toast.dismiss(loadingToast)
+      toast.success('Logged in successfully!')
+      
       // Redirect to the dashboard after successful login
       router.push('/dashboard')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      toast.dismiss(loadingToast)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      toast.error(errorMessage)
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
