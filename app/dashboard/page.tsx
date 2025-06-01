@@ -10,6 +10,7 @@ import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CalendarDays, Clock, User } from 'lucide-react'
+import { LoadingPage } from '@/components/ui/loading-spinner'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -52,11 +53,7 @@ export default function DashboardPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-lg">Loading...</p>
-      </div>
-    )
+    return <LoadingPage />
   }
 
   // Get user initials for avatar fallback

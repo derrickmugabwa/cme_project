@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LoadingPage } from '@/components/ui/loading-spinner';
 import { format } from 'date-fns';
 
 interface Session {
@@ -28,7 +29,7 @@ export default function SessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -198,7 +199,7 @@ export default function SessionsPage() {
       )}
       
       {loading ? (
-        <p>Loading Webinars...</p>
+        <LoadingPage />
       ) : sessions.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">

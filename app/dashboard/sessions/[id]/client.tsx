@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import EnrollButton from '@/components/units/EnrollButton';
+import { LoadingPage, LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Session {
   id: string;
@@ -56,6 +58,28 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(true);
+  
+  // Function to fetch enrollment status
+  const fetchEnrollmentStatus = async () => {
+    try {
+      setEnrollmentLoading(true);
+      const response = await fetch(`/api/sessions/${sessionId}/enrollment-status`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch enrollment status');
+      }
+      
+      const data = await response.json();
+      setIsEnrolled(data.enrolled);
+    } catch (error) {
+      console.error('Error fetching enrollment status:', error);
+      setIsEnrolled(false);
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
   
   useEffect(() => {
     async function fetchWebinarDetails() {
@@ -117,6 +141,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
     }
     
     fetchWebinarDetails();
+    fetchEnrollmentStatus();
   }, [sessionId]);
   
   // Format date for display
@@ -210,7 +235,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   };
   
   if (loading) {
-    return <p className="text-center py-8">Loading webinar details...</p>;
+    return <LoadingPage />;
   }
   
   if (error) {
@@ -322,46 +347,75 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
           
           <CardContent>
             <div className="border-t pt-4 mt-2">
-              <h3 className="font-medium text-lg mb-2">{session.title}</h3>
+              <h3 className="font-medium text-lg mb-2">{session?.title}</h3>
               
-              {session.description && (
+              {session?.description && (
                 <p className="text-gray-700 mb-4">{session.description}</p>
               )}
               
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Date & Time</h4>
-                  <p>{formatDate(session.start_time)}</p>
+                  <p>{formatDate(session?.start_time || '')}</p>
                   <p className="text-sm text-gray-500">
-                    to {format(new Date(session.end_time), 'h:mm a')}
+                    to {format(new Date(session?.end_time || Date.now()), 'h:mm a')}
                   </p>
                 </div>
                 
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Location</h4>
-                  {session.is_online ? (
+                  {session?.is_online ? (
                     <div>
                       <Badge className="bg-blue-100 text-blue-800">Online Meeting</Badge>
                     </div>
                   ) : (
-                    <p>{session.location || 'No location specified'}</p>
+                    <p>{session?.location || 'No location specified'}</p>
                   )}
                 </div>
                 
-                {session.is_online && (
+                {session?.is_online && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Meeting Link</h4>
-                    {session.teams_join_url ? (
-                      <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                        </svg>
-                        <button 
-                          onClick={openJoinDialog}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          Join Meeting
-                        </button>
+                    {session?.teams_join_url ? (
+                      <div>
+                        {enrollmentLoading ? (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            disabled
+                          >
+                            <LoadingSpinner size="xs" className="mr-1" />
+                            Loading
+                          </Button>
+                        ) : isEnrolled ? (
+                          <Button 
+                            onClick={openJoinDialog}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                            Join Meeting
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1"
+                              disabled
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                              </svg>
+                              Join Meeting
+                            </Button>
+                            <p className="text-xs text-amber-600">Enrollment required to join</p>
+                          </div>
+                        )}
                       </div>
                     ) : session.teams_error ? (
                       <p className="text-red-600 flex items-center">
@@ -398,6 +452,12 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                 <span className="font-medium">
                   {Math.round((new Date(session.end_time).getTime() - new Date(session.start_time).getTime()) / (1000 * 60))} minutes
                 </span>
+              </div>
+              
+              {/* Enrollment section */}
+              <div className="py-4 border-b">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Enrollment</h3>
+                <EnrollButton sessionId={sessionId} />
               </div>
               
               <div className="flex justify-between py-2 border-b">
@@ -524,9 +584,9 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               <div 
                 className="h-full bg-green-500" 
                 style={{ 
-                  width: new Date() > new Date(session.end_time) 
+                  width: new Date() > new Date(session?.end_time || Date.now()) 
                     ? '100%' 
-                    : new Date() < new Date(session.start_time) 
+                    : new Date() < new Date(session?.start_time || Date.now()) 
                       ? '50%' 
                       : '75%' 
                 }}
@@ -560,7 +620,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                   <tr>
                     <th className="py-3 px-4 text-left font-medium">Student</th>
                     <th className="py-3 px-4 text-left font-medium">Email</th>
-                    {session.is_online && (
+                    {session?.is_online && (
                       <>
                         <th className="py-3 px-4 text-left font-medium">Teams Verified</th>
                         <th className="py-3 px-4 text-left font-medium">Join Time</th>
@@ -575,7 +635,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                     <tr key={record.id}>
                       <td className="py-2 px-4">{record.student?.full_name || 'Unknown'}</td>
                       <td className="py-2 px-4">{record.student?.email || 'Unknown'}</td>
-                      {session.is_online && (
+                      {session?.is_online && (
                         <>
                           <td className="py-2 px-4">
                             {record.teams_verified ? (

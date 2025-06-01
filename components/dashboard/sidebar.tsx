@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, FileText, Video, Calendar, BarChart2, User, Settings } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/client'
+import { Home, FileText, Video, Calendar, BarChart2, User, Settings, ClipboardCheck, ChartNoAxesColumn, Coins } from 'lucide-react'
 
 interface NavItemProps {
   href: string
@@ -32,6 +34,37 @@ function NavItem({ href, children }: NavItemProps) {
 }
 
 export function Sidebar() {
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function getUserRole() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+            
+          if (profile) {
+            setUserRole(profile.role);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    getUserRole();
+  }, []);
+
+  const isAdminOrFaculty = userRole === 'admin' || userRole === 'faculty';
 
   return (
     <aside className="fixed left-0 top-0 z-30 h-screen hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground shadow-lg overflow-auto my-4 ml-4 rounded-2xl">
@@ -63,14 +96,32 @@ export function Sidebar() {
               <Video className="h-4 w-4" />
               Webinars
             </NavItem>
-            <NavItem href="/dashboard/attendance">
-              <Calendar className="h-4 w-4" />
-              Attendance
-            </NavItem>
+            {userRole === 'user' && (
+              <NavItem href="/dashboard/my-attendance">
+                <ClipboardCheck className="h-4 w-4" />
+                My Attendance
+              </NavItem>
+            )}
+            {isAdminOrFaculty && (
+              <NavItem href="/dashboard/attendance">
+                <Calendar className="h-4 w-4" />
+                Attendance Management
+              </NavItem>
+            )}
             <NavItem href="/dashboard/statistics">
-              <BarChart2 className="h-4 w-4" />
+              <ChartNoAxesColumn className="h-4 w-4" />
               Statistics
             </NavItem>
+            <NavItem href="/dashboard/units">
+              <Coins className="h-4 w-4" />
+              Units Wallet
+            </NavItem>
+            {isAdminOrFaculty && (
+              <NavItem href="/dashboard/admin/units">
+                <Coins className="h-4 w-4" />
+                Units Management
+              </NavItem>
+            )}
           </div>
           
           <div className="mt-6 mb-2">

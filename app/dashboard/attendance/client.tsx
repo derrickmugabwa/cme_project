@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,7 +12,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, MoreVertical, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Profile {
   id: string;
@@ -52,6 +53,7 @@ export default function AttendanceClient() {
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
     checkUserRole();
@@ -201,134 +203,321 @@ export default function AttendanceClient() {
   
   async function handleApproveSelected() {
     try {
-      const results = await Promise.all(
-        selectedRecords.map(async (id) => {
-          const response = await fetch('/api/attendance/approve', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ attendanceId: id })
-          });
-          
-          return { id, success: response.ok };
-        })
-      );
+      if (selectedRecords.length === 0) return;
       
-      const successCount = results.filter(r => r.success).length;
-      const failCount = results.length - successCount;
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (successCount > 0) {
+      if (!user) {
         toast({
-          title: 'Attendance Approved',
-          description: `Successfully approved ${successCount} attendance record${successCount !== 1 ? 's' : ''}.`,
-          variant: 'default',
-        });
-      }
-      
-      if (failCount > 0) {
-        toast({
-          title: 'Approval Failed',
-          description: `Failed to approve ${failCount} attendance record${failCount !== 1 ? 's' : ''}.`,
+          title: 'Error',
+          description: 'You must be logged in to approve attendance records',
           variant: 'destructive',
         });
+        return;
       }
+      
+      setLoading(true);
+      
+      // Update each selected record
+      const updatePromises = selectedRecords.map(async (recordId) => {
+        const { error } = await supabase
+          .from('session_attendance')
+          .update({
+            status: 'approved',
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+          })
+          .eq('id', recordId);
+          
+        if (error) {
+          console.error(`Error approving record ${recordId}:`, error);
+          throw new Error(error.message);
+        }
+      });
+      
+      await Promise.all(updatePromises);
+      
+      toast({
+        title: 'Success',
+        description: `${selectedRecords.length} attendance record(s) approved successfully`,
+      });
       
       // Refresh the list
       fetchAttendanceRecords(currentTab);
     } catch (error: any) {
-      console.error('Error approving attendance:', error);
+      console.error('Error approving records:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to approve attendance',
+        description: error.message || 'Failed to approve attendance records',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   }
   
-  function handleRejectClick(id: string) {
-    setCurrentRecordId(id);
+  function handleRejectClick(recordId: string) {
+    setCurrentRecordId(recordId);
     setRejectionNotes('');
     setNotesDialogOpen(true);
   }
   
   async function handleRejectConfirm() {
-    if (!currentRecordId) return;
-    
     try {
-      const response = await fetch('/api/attendance/reject', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          attendanceId: currentRecordId,
-          notes: rejectionNotes
-        })
-      });
+      if (!currentRecordId) return;
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reject attendance');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to reject attendance records',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      setLoading(true);
+      setNotesDialogOpen(false);
+      
+      const { error } = await supabase
+        .from('session_attendance')
+        .update({
+          status: 'rejected',
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          notes: rejectionNotes,
+        })
+        .eq('id', currentRecordId);
+        
+      if (error) {
+        throw new Error(error.message);
       }
       
       toast({
-        title: 'Attendance Rejected',
-        description: 'Successfully rejected the attendance record.',
-        variant: 'default',
+        title: 'Success',
+        description: 'Attendance record rejected successfully',
       });
-      
-      setNotesDialogOpen(false);
-      setCurrentRecordId(null);
       
       // Refresh the list
       fetchAttendanceRecords(currentTab);
     } catch (error: any) {
-      console.error('Error rejecting attendance:', error);
+      console.error('Error rejecting record:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reject attendance',
+        description: error.message || 'Failed to reject attendance record',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
+      setCurrentRecordId(null);
     }
   }
   
   if (!isAdmin) {
-    return <p className="text-center py-8">Checking permissions...</p>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em]"></div>
+        <span className="ml-2">Checking permissions...</span>
+      </div>
+    );
   }
   
   if (loading && attendanceRecords.length === 0) {
-    return <p className="text-center py-8">Loading attendance records...</p>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em]"></div>
+        <span className="ml-2">Loading attendance records...</span>
+      </div>
+    );
   }
+  
+  // Filter records based on search term
+  const filteredRecords = searchTerm
+    ? attendanceRecords.filter(record => 
+        record.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.sessions.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    : attendanceRecords;
   
   return (
     <div>
       <Toaster />
       
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Attendance Records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="pending_approval" onValueChange={setCurrentTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="pending_approval">Pending Approval</TabsTrigger>
-              <TabsTrigger value="approved">Approved</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected</TabsTrigger>
-            </TabsList>
+      <Card className="mb-6 border-none shadow-none">
+        <CardContent className="p-0">
+          <div className="bg-white rounded-lg shadow">
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-b">
+              <div className="flex space-x-1 mb-4 sm:mb-0">
+                <Button 
+                  variant={currentTab === 'all' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentTab('all')}
+                  className="rounded-full"
+                >
+                  All
+                </Button>
+                <Button 
+                  variant={currentTab === 'pending_approval' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentTab('pending_approval')}
+                  className="rounded-full"
+                >
+                  Pending
+                </Button>
+                <Button 
+                  variant={currentTab === 'approved' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentTab('approved')}
+                  className="rounded-full"
+                >
+                  Completed
+                </Button>
+                <Button 
+                  variant={currentTab === 'rejected' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentTab('rejected')}
+                  className="rounded-full"
+                >
+                  Rejected
+                </Button>
+              </div>
+              
+              <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="pl-8 w-full sm:w-[250px] h-9 rounded-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
             
-            <TabsContent value="pending_approval">
-              {renderAttendanceTable()}
-            </TabsContent>
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 p-4 text-sm font-medium text-gray-500 border-b">
+              <div className="col-span-1">
+                <Checkbox 
+                  id="select-all"
+                  checked={selectedRecords.length === filteredRecords.length && filteredRecords.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedRecords(filteredRecords.map(record => record.id));
+                    } else {
+                      setSelectedRecords([]);
+                    }
+                  }}
+                />
+              </div>
+              <div className="col-span-3">Webinar Title</div>
+              <div className="col-span-2">Date</div>
+              <div className="col-span-2">Type</div>
+              <div className="col-span-2">Attendee</div>
+              <div className="col-span-1">Status</div>
+              <div className="col-span-1">Actions</div>
+            </div>
             
-            <TabsContent value="approved">
-              {renderAttendanceTable()}
-            </TabsContent>
-            
-            <TabsContent value="rejected">
-              {renderAttendanceTable()}
-            </TabsContent>
-          </Tabs>
+            {/* Table Content */}
+            {error ? (
+              <div className="p-4 text-center text-red-500">
+                <p>{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => fetchAttendanceRecords(currentTab)}
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : filteredRecords.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <p>No {currentTab.replace('_', ' ')} attendance records found.</p>
+              </div>
+            ) : (
+              <div>
+                {currentTab === 'pending_approval' && selectedRecords.length > 0 && (
+                  <div className="flex justify-end p-2 bg-gray-50">
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={handleApproveSelected}
+                      className="flex items-center"
+                    >
+                      <CheckCircle className="mr-1 h-4 w-4" />
+                      Approve Selected ({selectedRecords.length})
+                    </Button>
+                  </div>
+                )}
+                
+                {filteredRecords.map((record) => (
+                  <div key={record.id} className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50">
+                    <div className="col-span-1 flex items-center">
+                      <Checkbox 
+                        checked={selectedRecords.includes(record.id)}
+                        onCheckedChange={() => handleSelectRecord(record.id)}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <p className="font-medium">{record.sessions.title}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p>{formatDate(record.sessions.start_time)}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Online</Badge>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="font-medium">{record.profiles.full_name}</p>
+                      <p className="text-xs text-gray-500">{record.profiles.email}</p>
+                    </div>
+                    <div className="col-span-1">
+                      {record.status === 'pending_approval' && (
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>
+                      )}
+                      {record.status === 'approved' && (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>
+                      )}
+                      {record.status === 'rejected' && (
+                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejected</Badge>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => window.location.href = `/dashboard/sessions/${record.session_id}`}>
+                            <Eye className="mr-2 h-4 w-4" /> View Webinar
+                          </DropdownMenuItem>
+                          {record.status === 'pending_approval' && (
+                            <>
+                              <DropdownMenuItem onClick={() => {
+                                const recordIds = [record.id];
+                                setSelectedRecords(recordIds);
+                                handleApproveSelected();
+                              }}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRejectClick(record.id)}>
+                                <XCircle className="mr-2 h-4 w-4" /> Reject
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       
@@ -358,188 +547,4 @@ export default function AttendanceClient() {
       </Dialog>
     </div>
   );
-  
-  function renderAttendanceTable() {
-    if (error) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-          <p className="text-red-700">{error}</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => fetchAttendanceRecords(currentTab)}
-            className="mt-2"
-          >
-            Try Again
-          </Button>
-        </div>
-      );
-    }
-    
-    if (attendanceRecords.length === 0) {
-      return (
-        <div className="text-center py-8 border rounded-md bg-gray-50">
-          <p className="text-gray-500">No {currentTab.replace('_', ' ')} attendance records found.</p>
-        </div>
-      );
-    }
-    
-    return (
-      <div>
-        {currentTab === 'pending_approval' && (
-          <div className="flex justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="select-all" 
-                checked={selectedRecords.length === attendanceRecords.length && attendanceRecords.length > 0}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    setSelectedRecords(attendanceRecords.map(record => record.id));
-                  } else {
-                    setSelectedRecords([]);
-                  }
-                }}
-              />
-              <Label htmlFor="select-all">Select All</Label>
-            </div>
-            
-            <div className="space-x-2">
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleApproveSelected}
-                disabled={selectedRecords.length === 0}
-              >
-                Approve Selected
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                {currentTab === 'pending_approval' && (
-                  <th className="py-2 px-4 text-left font-medium"></th>
-                )}
-                <th className="py-2 px-4 text-left font-medium">User</th>
-                <th className="py-2 px-4 text-left font-medium">Session</th>
-                <th className="py-2 px-4 text-left font-medium">Check-in Time</th>
-                <th className="py-2 px-4 text-left font-medium">Status</th>
-                {(currentTab === 'approved' || currentTab === 'rejected') && (
-                  <th className="py-2 px-4 text-left font-medium">Processed By</th>
-                )}
-                {currentTab === 'rejected' && (
-                  <th className="py-2 px-4 text-left font-medium">Reason</th>
-                )}
-                {currentTab === 'pending_approval' && (
-                  <th className="py-2 px-4 text-left font-medium">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRecords.map((record) => (
-                <tr key={record.id} className="border-b hover:bg-gray-50">
-                  {currentTab === 'pending_approval' && (
-                    <td className="py-3 px-4">
-                      <Checkbox 
-                        checked={selectedRecords.includes(record.id)}
-                        onCheckedChange={() => handleSelectRecord(record.id)}
-                      />
-                    </td>
-                  )}
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium">{record.profiles.full_name}</p>
-                      <p className="text-sm text-gray-500">{record.profiles.email}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div>
-                      <p className="font-medium">{record.sessions.title}</p>
-                      <p className="text-sm text-gray-500">{formatDate(record.sessions.start_time)}</p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">{formatDate(record.check_in_time)}</td>
-                  <td className="py-3 px-4">
-                    {record.status === 'pending_approval' && (
-                      <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
-                    )}
-                    {record.status === 'approved' && (
-                      <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                    )}
-                    {record.status === 'rejected' && (
-                      <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                    )}
-                  </td>
-                  {(currentTab === 'approved' || currentTab === 'rejected') && (
-                    <td className="py-3 px-4">
-                      {record.approved_at && (
-                        <div>
-                          <p className="text-sm">{formatDate(record.approved_at)}</p>
-                        </div>
-                      )}
-                    </td>
-                  )}
-                  {currentTab === 'rejected' && (
-                    <td className="py-3 px-4">
-                      <p className="text-sm">{record.notes || 'No reason provided'}</p>
-                    </td>
-                  )}
-                  {currentTab === 'pending_approval' && (
-                    <td className="py-3 px-4">
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            fetch('/api/attendance/approve', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({ attendanceId: record.id })
-                            })
-                            .then(response => {
-                              if (response.ok) {
-                                toast({
-                                  title: 'Attendance Approved',
-                                  description: 'Successfully approved the attendance record.',
-                                  variant: 'default',
-                                });
-                                fetchAttendanceRecords(currentTab);
-                              } else {
-                                throw new Error('Failed to approve attendance');
-                              }
-                            })
-                            .catch(error => {
-                              toast({
-                                title: 'Error',
-                                description: error.message || 'Failed to approve attendance',
-                                variant: 'destructive',
-                              });
-                            });
-                          }}
-                        >
-                          Approve
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleRejectClick(record.id)}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
 }

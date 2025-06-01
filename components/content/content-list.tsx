@@ -53,10 +53,11 @@ export function ContentList({ userId, userRole }: ContentListProps) {
           throw new Error(`Error checking content: ${checkError.message}`)
         }
         
-        // If no content exists, try to seed some test content
+        // If no content exists, we'll just show an empty state
+        // Disabled automatic seeding since it requires SUPABASE_SERVICE_ROLE_KEY
         if (!allContent || allContent.length === 0) {
-          console.log('No content found, attempting to seed test content...')
-          await seedTestContent()
+          console.log('No content found, showing empty state')
+          // Removed: await seedTestContent()
         }
         
         console.log('Content check:', { exists: allContent && allContent.length > 0, userRole })

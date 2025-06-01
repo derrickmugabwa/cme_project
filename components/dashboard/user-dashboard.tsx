@@ -8,6 +8,7 @@ import { BookOpen, Calendar, CheckCircle, Clock, FileText, GraduationCap, BarCha
 import { createClient } from '@/lib/client'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { LoadingSpinner, LoadingSection, LoadingPage } from '@/components/ui/loading-spinner'
 
 interface UserDashboardProps {
   profile: any
@@ -17,10 +18,11 @@ interface UserDashboardProps {
 // Webinar Sessions List Component
 function WebinarSessionsList({ userId }: { userId: string }) {
   const [sessions, setSessions] = useState<any[]>([]);
+  const [enrollments, setEnrollments] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const fetchSessions = async () => {
+    const fetchSessionsAndEnrollments = async () => {
       try {
         setLoading(true);
         const supabase = createClient();
@@ -34,25 +36,36 @@ function WebinarSessionsList({ userId }: { userId: string }) {
           
         if (sessionsError) throw sessionsError;
         
+        // Fetch user's enrollments
+        const { data: enrollmentsData, error: enrollmentsError } = await supabase
+          .from('session_enrollments')
+          .select('session_id')
+          .eq('user_id', userId);
+          
+        if (enrollmentsError) throw enrollmentsError;
+        
+        // Create a map of session_id -> enrolled status
+        const enrollmentMap: Record<string, boolean> = {};
+        (enrollmentsData || []).forEach(enrollment => {
+          enrollmentMap[enrollment.session_id] = true;
+        });
+        
         setSessions(sessionsData || []);
+        setEnrollments(enrollmentMap);
       } catch (error) {
-        console.error('Error fetching sessions:', error);
+        console.error('Error fetching sessions and enrollments:', error);
       } finally {
         setLoading(false);
       }
     };
     
     if (userId) {
-      fetchSessions();
+      fetchSessionsAndEnrollments();
     }
   }, [userId]);
   
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-      </div>
-    );
+    return <LoadingSection />;
   }
   
   if (sessions.length === 0) {
@@ -97,12 +110,21 @@ function WebinarSessionsList({ userId }: { userId: string }) {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <Button 
-                onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                View Details
-              </Button>
+              {enrollments[session.id] ? (
+                <Button 
+                  onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  View Details
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  Enroll
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -112,6 +134,11 @@ function WebinarSessionsList({ userId }: { userId: string }) {
 }
 
 export function UserDashboard({ profile, user }: UserDashboardProps) {
+  // State for user units and overall loading state
+  const [userUnits, setUserUnits] = useState<number>(0);
+  const [loadingUnits, setLoadingUnits] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  
   // Sample data for visualization - would be replaced with real data in production
   const attendanceData = {
     present: 0,
@@ -125,6 +152,41 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
     completed: 0,
     total: 0,
     percentage: 0
+  }
+  
+  // Fetch user units
+  useEffect(() => {
+    const fetchUserUnits = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoadingUnits(true);
+        setLoading(true);
+        const supabase = createClient();
+        const { data, error } = await supabase.from('user_units').select('units').eq('user_id', user.id).single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 is 'not found'
+          console.error('Error fetching user units:', error);
+        } else {
+          setUserUnits(data?.units || 0);
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching units:', error);
+      } finally {
+        setLoadingUnits(false);
+        setLoading(false);
+      }
+    };
+    
+    fetchUserUnits();
+  }, [user?.id]);
+
+  // Show loading page when the entire dashboard is loading
+  if (loading) {
+    return <LoadingPage />;
   }
 
   return (
@@ -226,40 +288,49 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-6 py-6">
-              <div className="relative w-32 h-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-4xl font-bold">0</span>
+              {loadingUnits ? (
+                <div className="flex justify-center items-center h-32">
+                  <LoadingSpinner size="md" />
                 </div>
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  <circle
-                    className="text-muted stroke-current"
-                    strokeWidth="10"
-                    fill="transparent"
-                    r="40"
-                    cx="50"
-                    cy="50"
-                  />
-                  <circle
-                    className="text-purple-500 stroke-current"
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                    fill="transparent"
-                    r="40"
-                    cx="50"
-                    cy="50"
-                    strokeDasharray="0 251.2"
-                    transform="rotate(-90 50 50)"
-                  />
-                </svg>
-              </div>
+              ) : (
+                <div className="relative w-32 h-32">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-4xl font-bold">{userUnits}</span>
+                  </div>
+                  <svg className="w-full h-full" viewBox="0 0 100 100">
+                    <circle
+                      className="text-muted stroke-current"
+                      strokeWidth="10"
+                      fill="transparent"
+                      r="40"
+                      cx="50"
+                      cy="50"
+                    />
+                    <circle
+                      className="text-purple-500 stroke-current"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      fill="transparent"
+                      r="40"
+                      cx="50"
+                      cy="50"
+                      strokeDasharray={`${Math.min(userUnits * 25, 251.2)} 251.2`}
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                </div>
+              )}
               <div className="text-center">
                 <h3 className="text-lg font-medium">Available Units</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   You need units to enroll in webinar sessions
                 </p>
               </div>
-              <Button className="w-full">
-                Top Up Units
+              <Button 
+                className="w-full"
+                onClick={() => window.location.href = '/dashboard/units'}
+              >
+                Manage Units
               </Button>
             </div>
           </CardContent>
