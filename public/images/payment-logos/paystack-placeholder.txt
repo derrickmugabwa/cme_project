@@ -1,0 +1,9 @@
+This is a placeholder file for the Paystack logo.
+
+Please replace this with an actual paystack.png image file.
+
+Recommended specifications:
+- Format: PNG with transparency
+- Resolution: At least 300x100 pixels
+- Size: Keep under 50KB
+- Aspect ratio: Approximately 3:1 (width:height)

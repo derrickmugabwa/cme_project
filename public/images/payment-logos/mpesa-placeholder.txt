@@ -1,0 +1,9 @@
+This is a placeholder file for the M-Pesa logo.
+
+Please replace this with an actual mpesa.png image file.
+
+Recommended specifications:
+- Format: PNG with transparency
+- Resolution: At least 300x100 pixels
+- Size: Keep under 50KB
+- Aspect ratio: Approximately 3:1 (width:height)
