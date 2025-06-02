@@ -108,10 +108,6 @@ export function Sidebar() {
                 Attendance Management
               </NavItem>
             )}
-            <NavItem href="/dashboard/statistics">
-              <ChartNoAxesColumn className="h-4 w-4" />
-              Statistics
-            </NavItem>
             <NavItem href="/dashboard/units">
               <Coins className="h-4 w-4" />
               Units Wallet
@@ -124,20 +120,7 @@ export function Sidebar() {
             )}
           </div>
           
-          <div className="mt-6 mb-2">
-            <h2 className="px-3 text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">ACCOUNT</h2>
-          </div>
-          
-          <div className="space-y-1">
-            <NavItem href="/dashboard/profile">
-              <User className="h-4 w-4" />
-              Profile
-            </NavItem>
-            <NavItem href="/dashboard/settings">
-              <Settings className="h-4 w-4" />
-              Settings
-            </NavItem>
-          </div>
+          {/* Account section removed as not needed at the moment */}
         </div>
         
         {/* Sidebar Footer */}

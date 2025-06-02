@@ -30,6 +30,7 @@ interface Session {
   created_by: string;
   created_at: string;
   updated_at: string;
+  attendeeCount?: number;
 }
 
 interface Attendance {
@@ -46,11 +47,24 @@ interface Attendance {
   verification_method: string;
 }
 
+interface Enrollee {
+  id: string;
+  user_id: string;
+  session_id: string;
+  created_at: string;
+  user: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+}
+
 // Client component that receives the sessionId as a prop
 export default function WebinarDetailClient({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [enrollees, setEnrollees] = useState<Enrollee[]>([]);
   const [creatorName, setCreatorName] = useState<string>('Unknown');
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +74,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(true);
+  const [enrolleesLoading, setEnrolleesLoading] = useState(true);
   
   // Function to fetch enrollment status
   const fetchEnrollmentStatus = async () => {
@@ -132,6 +147,77 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         // Fetch attendance records if needed in the future
         // For now, we'll just set an empty array
         setAttendance([]);
+        
+        // Fetch enrollees (users who have enrolled in this session)
+        try {
+          setEnrolleesLoading(true);
+          // Fetch enrollments with user data
+          const { data: enrolleesData, error: enrolleesError } = await supabase
+            .from('session_enrollments')
+            .select('id, user_id, session_id, created_at')
+            .eq('session_id', sessionId);
+            
+          // If we have enrollments, fetch the user profiles separately
+          let userProfiles: Record<string, { id: string, full_name: string, email: string }> = {};
+          
+          if (enrolleesData && enrolleesData.length > 0) {
+            const userIds = enrolleesData.map(e => e.user_id).filter(Boolean);
+            
+            if (userIds.length > 0) {
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .in('id', userIds);
+                
+              if (profiles) {
+                // Create a map of user_id to profile data for quick lookup
+                userProfiles = profiles.reduce((acc, profile) => {
+                  acc[profile.id] = {
+                    id: profile.id,
+                    full_name: profile.full_name || 'Unknown',
+                    email: profile.email || ''
+                  };
+                  return acc;
+                }, {} as Record<string, { id: string, full_name: string, email: string }>);
+              }
+            }
+          }
+          
+          if (enrolleesError) {
+            console.error('Error fetching enrollees:', enrolleesError);
+          } else {
+            // Map enrollment data with user profile data
+            if (enrolleesData) {
+              const typedEnrollees = enrolleesData.map(item => {
+                const userProfile = userProfiles[item.user_id] || {
+                  id: item.user_id || '',
+                  full_name: 'Unknown User',
+                  email: ''
+                };
+                
+                return {
+                  id: item.id,
+                  user_id: item.user_id,
+                  session_id: item.session_id,
+                  created_at: item.created_at,
+                  user: userProfile
+                };
+              });
+              
+              setEnrollees(typedEnrollees);
+            } else {
+              setEnrollees([]);
+            }
+            // Update session with attendee count
+            if (sessionData) {
+              sessionData.attendeeCount = enrolleesData?.length || 0;
+            }
+          }
+        } catch (enrolleesError) {
+          console.error('Error fetching enrollees:', enrolleesError);
+        } finally {
+          setEnrolleesLoading(false);
+        }
       } catch (error: any) {
         console.error('Error fetching webinar details:', error);
         setError(error.message || 'An error occurred while fetching webinar details');
@@ -477,7 +563,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               <div className="flex justify-between py-2">
                 <span>Attendees</span>
                 <span className="font-medium">
-                  {attendance.length} registered
+                  {enrolleesLoading ? 'Loading...' : (session?.attendeeCount || enrollees.length)} enrolled
                 </span>
               </div>
               
@@ -497,6 +583,57 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
           </CardContent>
         </Card>
       </div>
+      
+      {/* Attendees Section - Only visible to admins and faculty */}
+      {currentUserRole && (currentUserRole === 'admin' || currentUserRole === 'faculty') && (
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl">Enrolled Attendees</CardTitle>
+            <Badge variant="outline" className="ml-2">
+              {enrolleesLoading ? 
+                <span className="flex items-center">
+                  <LoadingSpinner size="xs" className="mr-1" />
+                  Loading...
+                </span> : 
+                `${enrollees.length} enrolled`
+              }
+            </Badge>
+          </CardHeader>
+          
+          <CardContent>
+            {enrolleesLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : enrollees.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No attendees have enrolled for this webinar yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-4 font-medium text-gray-500">Name</th>
+                      <th className="text-left py-2 px-4 font-medium text-gray-500">Email</th>
+                      <th className="text-left py-2 px-4 font-medium text-gray-500">Enrolled On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrollees.map((enrollee) => (
+                      <tr key={enrollee.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">{enrollee.user.full_name}</td>
+                        <td className="py-3 px-4">{enrollee.user.email || 'No email'}</td>
+                        <td className="py-3 px-4">{format(new Date(enrollee.created_at), 'MMM d, yyyy h:mm a')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       
       {/* Status Section */}
       <Card>

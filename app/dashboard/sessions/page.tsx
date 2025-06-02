@@ -21,6 +21,8 @@ interface Session {
   teams_join_url: string;
   teams_error: string;
   created_by: string;
+  isEnrolled?: boolean;
+  attendeeCount?: number;
 }
 
 type FilterType = 'all' | 'upcoming' | 'active' | 'past';
@@ -70,12 +72,14 @@ export default function SessionsPage() {
       try {
         // Fetch user profile to get role
         const { data: { session } } = await supabase.auth.getSession();
+        let userId = null;
         
         if (session) {
+          userId = session.user.id;
           const { data: profileData } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', userId)
             .single();
             
           if (profileData) {
@@ -91,6 +95,72 @@ export default function SessionsPage() {
         
         if (sessionsError) {
           throw sessionsError;
+        }
+        
+        // Fetch attendee counts for each session
+        if (sessionsData && sessionsData.length > 0) {
+          const sessionIds = sessionsData.map(session => session.id);
+          
+          // Fetch all enrollments for these sessions
+          const { data: enrollmentsData, error: enrollmentsCountError } = await supabase
+            .from('session_enrollments')
+            .select('session_id')
+            .in('session_id', sessionIds);
+            
+          if (enrollmentsCountError) {
+            console.error('Error fetching enrollment counts:', enrollmentsCountError);
+          } else {
+            // Count enrollments for each session
+            const countMap: Record<string, number> = {};
+            
+            // Initialize all sessions with 0 count
+            sessionIds.forEach(id => {
+              countMap[id] = 0;
+            });
+            
+            // Count enrollments for each session
+            if (enrollmentsData) {
+              enrollmentsData.forEach(enrollment => {
+                if (enrollment.session_id) {
+                  countMap[enrollment.session_id] = (countMap[enrollment.session_id] || 0) + 1;
+                }
+              });
+            }
+            
+            // Add attendee counts to sessions
+            sessionsData.forEach(session => {
+              session.attendeeCount = countMap[session.id] || 0;
+            });
+          }
+        }
+        
+        // If user is logged in, fetch their enrollments
+        if (userId && sessionsData && sessionsData.length > 0) {
+          const sessionIds = sessionsData.map(session => session.id);
+          
+          // Query the session_enrollments table
+          const { data: enrollmentsData, error: enrollmentsError } = await supabase
+            .from('session_enrollments')
+            .select('session_id')
+            .eq('user_id', userId)
+            .in('session_id', sessionIds);
+            
+          if (enrollmentsError) {
+            console.error('Error fetching enrollments:', enrollmentsError);
+          } else {
+            // Create a set of enrolled session IDs for quick lookup
+            const enrolledSessionIds = new Set(enrollmentsData?.map(e => e.session_id) || []);
+            
+            // Add enrollment status to each session
+            const sessionsWithEnrollment = sessionsData.map(session => ({
+              ...session,
+              isEnrolled: enrolledSessionIds.has(session.id)
+            }));
+            
+            setSessions(sessionsWithEnrollment);
+            setFilteredSessions(sessionsWithEnrollment);
+            return;
+          }
         }
         
         setSessions(sessionsData || []);
@@ -228,6 +298,7 @@ export default function SessionsPage() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Type</th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Attendees</th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Enrollment</th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground"></th>
                 </tr>
               </thead>
@@ -262,13 +333,23 @@ export default function SessionsPage() {
                         )}
                       </td>
                       <td className="p-4 align-middle">
-                        {/* Placeholder for attendee count - would need to be added to your data model */}
-                        <span>-</span>
+                        <span className="font-medium">{session.attendeeCount || 0}</span>
                       </td>
                       <td className="p-4 align-middle">
                         <Badge className={status.style}>
                           {status.label}
                         </Badge>
+                      </td>
+                      <td className="p-4 align-middle">
+                        {session.isEnrolled ? (
+                          <Badge className="border-transparent bg-green-100 text-green-800 hover:bg-green-200">
+                            Enrolled
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500">
+                            Not Enrolled
+                          </Badge>
+                        )}
                       </td>
                       <td className="p-4 align-middle">
                         <div className="flex items-center justify-end gap-2">

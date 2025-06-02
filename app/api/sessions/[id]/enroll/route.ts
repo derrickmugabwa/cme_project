@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/server';
 import { NextResponse } from 'next/server';
+import { sendEnrollmentConfirmation, WebinarDetails } from '@/services/email';
 
 // POST /api/sessions/:id/enroll - Enroll in a session (with unit check)
 export async function POST(
@@ -33,6 +34,34 @@ export async function POST(
       .select('id, title')
       .eq('id', sessionId)
       .single();
+      
+    // If session exists, get more detailed information for the email
+    let sessionDetails = null;
+    if (session) {
+      const { data: details, error: detailsError } = await supabase
+        .from('sessions')
+        .select(`
+          id, 
+          title, 
+          description,
+          start_time,
+          end_time,
+          location,
+          course_id,
+          is_online
+        `)
+        .eq('id', sessionId)
+        .single();
+      sessionDetails = details;
+      
+      console.log('Session details fetch result:', {
+        hasDetails: !!details,
+        sessionId,
+        title: details?.title,
+        detailsError: detailsError?.message,
+        availableColumns: details ? Object.keys(details) : []
+      });
+    }
     
     if (sessionError || !session) {
       return NextResponse.json(
@@ -86,6 +115,58 @@ export async function POST(
       .eq('user_id', user.id)
       .eq('session_id', sessionId)
       .single();
+    
+    // Get user profile information for the email
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single();
+    
+    console.log('User profile fetch result:', { 
+      hasProfile: !!userProfile, 
+      hasEmail: !!userProfile?.email,
+      profileError: profileError?.message
+    });
+    
+    // Send confirmation email if we have the user's email and detailed session info
+    if (userProfile?.email && sessionDetails) {
+      console.log('Attempting to send email confirmation with:', {
+        userEmail: userProfile.email,
+        userName: userProfile.full_name || 'Participant',
+        webinarTitle: sessionDetails.title
+      });
+      try {
+        // Format session data for the email
+        const webinarDetails: WebinarDetails = {
+          id: sessionDetails.id,
+          title: sessionDetails.title,
+          date: sessionDetails.start_time,
+          startTime: sessionDetails.start_time ? new Date(sessionDetails.start_time).toLocaleTimeString() : 'TBD',
+          endTime: sessionDetails.end_time ? new Date(sessionDetails.end_time).toLocaleTimeString() : undefined,
+          speakerName: 'Session Speaker', // We don't have speaker name in the sessions table
+          duration: sessionDetails.end_time && sessionDetails.start_time ? 
+            Math.round((new Date(sessionDetails.end_time).getTime() - new Date(sessionDetails.start_time).getTime()) / (1000 * 60)) : 60,
+          location: sessionDetails.is_online ? 'Online' : (sessionDetails.location || 'TBD'),
+          description: sessionDetails.description
+        };
+        
+        // Send the email
+        const userName = userProfile.full_name || 'Participant';
+        await sendEnrollmentConfirmation(
+          userProfile.email,
+          userName,
+          webinarDetails
+        );
+      } catch (emailError) {
+        // Log the error but don't fail the enrollment
+        console.error('Failed to send enrollment confirmation email:', {
+          error: emailError,
+          message: emailError instanceof Error ? emailError.message : 'Unknown error',
+          stack: emailError instanceof Error ? emailError.stack : undefined
+        });
+      }
+    }
     
     return NextResponse.json({
       success: true,
