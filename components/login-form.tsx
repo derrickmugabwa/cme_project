@@ -46,6 +46,29 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         return
       }
       
+      // Check if the user is disabled
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Get the user's profile to check disabled status
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('disabled')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileError) {
+          console.error('Error checking user status:', profileError)
+        } else if (profile?.disabled) {
+          // User is disabled, sign them out and show error
+          await supabase.auth.signOut()
+          toast.dismiss(loadingToast)
+          toast.error('Your account has been disabled. Please contact an administrator.')
+          setError('Your account has been disabled. Please contact an administrator.')
+          return
+        }
+      }
+      
       // Show success toast
       toast.dismiss(loadingToast)
       toast.success('Logged in successfully!')

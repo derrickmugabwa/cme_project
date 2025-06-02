@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/client'
-import { Home, FileText, Video, Calendar, BarChart2, User, Settings, ClipboardCheck, ChartNoAxesColumn, Coins } from 'lucide-react'
+import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, ChartNoAxesColumn } from 'lucide-react'
 
 interface NavItemProps {
   href: string
@@ -116,6 +116,12 @@ export function Sidebar() {
               <NavItem href="/dashboard/admin/units">
                 <Coins className="h-4 w-4" />
                 Units Management
+              </NavItem>
+            )}
+            {userRole === 'admin' && (
+              <NavItem href="/dashboard/admin/users">
+                <UsersRound className="h-4 w-4" />
+                User Management
               </NavItem>
             )}
           </div>
