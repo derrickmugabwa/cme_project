@@ -13,6 +13,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import EnrollButton from '@/components/units/EnrollButton';
 import { LoadingPage, LoadingSpinner } from '@/components/ui/loading-spinner';
+import { SessionCertificate } from '@/components/certificates/session-certificate';
 
 interface Session {
   id: string;
@@ -75,6 +76,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(true);
   const [enrolleesLoading, setEnrolleesLoading] = useState(true);
+  const [authSession, setAuthSession] = useState<any>(null);
   
   // Function to fetch enrollment status
   const fetchEnrollmentStatus = async () => {
@@ -103,14 +105,17 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         const supabase = createClient();
         
         // Get current user session
-        const { data: { session: authSession } } = await supabase.auth.getSession();
+        const { data: { session: authSessionData } } = await supabase.auth.getSession();
         
-        if (authSession) {
+        // Store auth session in state
+        setAuthSession(authSessionData);
+        
+        if (authSessionData) {
           // Get current user's role
           const { data: userData, error: userError } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', authSession.user.id)
+            .eq('id', authSessionData.user.id)
             .single();
             
           if (!userError && userData) {
@@ -545,6 +550,11 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Enrollment</h3>
                 <EnrollButton sessionId={sessionId} />
               </div>
+              
+              {/* Certificate section - only shown if user is authenticated */}
+              {authSession?.user && (
+                <SessionCertificate sessionId={sessionId} userId={authSession.user.id} />
+              )}
               
               <div className="flex justify-between py-2 border-b">
                 <span>Type</span>

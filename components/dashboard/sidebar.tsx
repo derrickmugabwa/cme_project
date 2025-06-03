@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/client'
-import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, ChartNoAxesColumn } from 'lucide-react'
+import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, ChartNoAxesColumn, Award, X } from 'lucide-react'
 
 interface NavItemProps {
   href: string
@@ -33,7 +33,7 @@ function NavItem({ href, children }: NavItemProps) {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -67,14 +67,23 @@ export function Sidebar() {
   const isAdminOrFaculty = userRole === 'admin' || userRole === 'faculty';
 
   return (
-    <aside className="fixed left-0 top-0 z-30 h-screen hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground shadow-lg overflow-auto my-4 ml-4 rounded-2xl">
+    <aside className={`fixed left-0 top-0 z-40 h-screen ${isOpen ? 'flex' : 'hidden'} md:flex w-64 flex-col bg-sidebar text-sidebar-foreground shadow-lg overflow-auto md:my-4 md:ml-4 md:rounded-2xl transition-all duration-300`}>
       <div className="flex flex-col h-full">
         {/* Sidebar Header */}
-        <div className="p-5">
+        <div className="p-5 flex justify-between items-center">
           <div className="flex items-center gap-2 mb-6">
             <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center text-white font-bold">C</div>
             <h2 className="text-lg font-bold text-sidebar-foreground">CME Platform</h2>
           </div>
+          {/* Close button for mobile */}
+          {onClose && (
+            <button 
+              onClick={onClose} 
+              className="md:hidden p-2 rounded-lg hover:bg-sidebar-accent/20"
+            >
+              <X className="h-5 w-5 text-sidebar-foreground" />
+            </button>
+          )}
         </div>
         
         {/* Navigation */}
@@ -111,6 +120,10 @@ export function Sidebar() {
             <NavItem href="/dashboard/units">
               <Coins className="h-4 w-4" />
               Units Wallet
+            </NavItem>
+            <NavItem href="/dashboard/certificates">
+              <Award className="h-4 w-4" />
+              My Certificates
             </NavItem>
             {isAdminOrFaculty && (
               <NavItem href="/dashboard/admin/units">
