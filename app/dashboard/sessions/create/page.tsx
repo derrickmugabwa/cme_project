@@ -86,7 +86,11 @@ export default function CreateSessionPage() {
           
           if (!isValid) {
             console.log('Token is expired');
-            setError('Microsoft token is expired. Please reconnect your account.');
+            toast({
+              variant: "destructive",
+              title: "Microsoft Authentication Error",
+              description: "Microsoft token is expired. Please reconnect your account."
+            });
           }
         } else {
           console.log('No Microsoft Graph tokens found');
@@ -256,6 +260,16 @@ export default function CreateSessionPage() {
           body: JSON.stringify(baseSessionData),
         });
       }
+        
+        // Check if response is defined before using it
+        if (!response) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to create webinar - no response received"
+          });
+          return;
+        }
         
         const result = await response.json();
         

@@ -20,7 +20,7 @@ interface AttendanceRecord {
     title: string;
     start_time: string;
     end_time: string;
-  };
+  }[];
 }
 
 export function AttendanceHistory() {
@@ -53,7 +53,7 @@ export function AttendanceHistory() {
         
         if (error) throw error;
         
-        setAttendanceRecords(data || []);
+        setAttendanceRecords(data as unknown as AttendanceRecord[] || []);
       } catch (error: any) {
         console.error('Error fetching attendance history:', error);
         setError(error.message);
@@ -113,9 +113,9 @@ export function AttendanceHistory() {
               <div key={record.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-medium">{record.sessions.title}</h3>
+                    <h3 className="font-medium">{record.sessions[0]?.title || 'Unknown Session'}</h3>
                     <p className="text-sm text-gray-500">
-                      {formatDate(record.sessions.start_time)} at {formatTime(record.sessions.start_time)}
+                      {formatDate(record.sessions[0]?.start_time || '')} at {formatTime(record.sessions[0]?.start_time || '')}
                     </p>
                   </div>
                   <div>

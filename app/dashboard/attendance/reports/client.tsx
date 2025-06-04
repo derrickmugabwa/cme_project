@@ -34,13 +34,13 @@ interface AttendanceRecord {
     email: string;
     professional_cadre?: string;
     institution?: string;
-  };
+  }[];
   sessions: {
     id: string;
     title: string;
     start_time: string;
     end_time: string;
-  };
+  }[];
 }
 
 interface ReportFilters {
@@ -173,7 +173,7 @@ export default function AttendanceReportsClient() {
       
       if (error) throw error;
       
-      setAttendanceRecords(data || []);
+      setAttendanceRecords(data as unknown as AttendanceRecord[] || []);
       
       // Calculate stats
       setTotalAttendance(data?.length || 0);
@@ -237,12 +237,12 @@ export default function AttendanceReportsClient() {
       // Data rows
       attendanceRecords.forEach(record => {
         const row = [
-          `"${record.sessions.title}"`,
-          formatDate(record.sessions.start_time),
-          `"${record.profiles.full_name}"`,
-          `"${record.profiles.email}"`,
-          `"${record.profiles.professional_cadre || ''}"`,
-          `"${record.profiles.institution || ''}"`,
+          `"${record.sessions[0]?.title || ''}"`,
+          formatDate(record.sessions[0]?.start_time || ''),
+          `"${record.profiles[0]?.full_name || ''}"`,
+          `"${record.profiles[0]?.email || ''}"`,
+          `"${record.profiles[0]?.professional_cadre || ''}"`,
+          `"${record.profiles[0]?.institution || ''}"`,
           `${formatDate(record.check_in_time)} ${formatTime(record.check_in_time)}`,
           record.status,
           record.approved_at ? `${formatDate(record.approved_at)}` : '',
@@ -456,16 +456,16 @@ export default function AttendanceReportsClient() {
                     <tr key={record.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium">{record.sessions.title}</p>
-                          <p className="text-xs text-gray-500">{formatDate(record.sessions.start_time)}</p>
+                          <p className="font-medium">{record.sessions[0]?.title || 'N/A'}</p>
+                          <p className="text-xs text-gray-500">{formatDate(record.sessions[0]?.start_time || '')}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium">{record.profiles.full_name}</p>
-                          <p className="text-xs text-gray-500">{record.profiles.email}</p>
-                          {record.profiles.professional_cadre && (
-                            <p className="text-xs text-gray-500">{record.profiles.professional_cadre}</p>
+                          <p className="font-medium">{record.profiles[0]?.full_name || 'N/A'}</p>
+                          <p className="text-xs text-gray-500">{record.profiles[0]?.email || 'N/A'}</p>
+                          {record.profiles[0]?.professional_cadre && (
+                            <p className="text-xs text-gray-500">{record.profiles[0]?.professional_cadre}</p>
                           )}
                         </div>
                       </td>

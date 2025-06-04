@@ -1,9 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { BarChart3, BookOpen, Database, FileText, HardDrive, Settings, ShieldCheck, Users } from 'lucide-react'
+import { Activity, Award, BarChart3, BookOpen, Calendar, CheckCircle, ClipboardX, Database, FileText, HardDrive, Image, Settings, Shield, ShieldCheck, UserPlus, Users } from "lucide-react"
+import { createClient } from '@/lib/client'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface AdminDashboardProps {
   profile: any
@@ -11,20 +14,200 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ profile, user }: AdminDashboardProps) {
-  // Sample data for visualization - would be replaced with real data in production
-  const userData = {
-    total: 1,
+  // State for dashboard data
+  const [loading, setLoading] = useState<boolean>(true)
+  
+  // State for document stats
+  const [documentStats, setDocumentStats] = useState({
+    count: 0
+  })
+  
+  // State for webinar stats
+  const [webinarStats, setWebinarStats] = useState({
+    count: 0
+  })
+  
+  // State for certificate stats
+  const [certificateStats, setCertificateStats] = useState({
+    count: 0
+  })
+  
+  // State for user stats
+  const [userStats, setUserStats] = useState({
+    total: 0,
     students: 0,
     faculty: 0,
-    admins: 1
-  }
-
-  const courseData = {
-    total: 0,
-    active: 0,
-    inactive: 0
-  }
-
+    admins: 0,
+    pendingApprovals: 0
+  })
+  
+  // State for recent activities
+  const [recentActivities, setRecentActivities] = useState<Array<{
+    id: string;
+    type: string;
+    description: string;
+    user: string;
+    timestamp: string;
+  }>>([])
+  
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
+      
+      try {
+        setLoading(true)
+        const supabase = createClient()
+        
+        // Fetch user statistics
+        const { data: usersData, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, role')
+        
+        if (usersError) {
+          console.error('Error fetching users:', usersError)
+        } else if (usersData) {
+          const students = usersData.filter(u => u.role === 'student').length
+          const faculty = usersData.filter(u => u.role === 'faculty').length
+          const admins = usersData.filter(u => u.role === 'admin').length
+          
+          setUserStats({
+            total: usersData.length,
+            students,
+            faculty,
+            admins,
+            pendingApprovals: 0 // We'll assume no pending approvals for now
+          })
+        }
+        
+        // Fetch sessions (webinars) data
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('sessions')
+          .select('id, title')
+        
+        if (sessionsError) {
+          console.error('Error fetching sessions:', sessionsError)
+        } else if (sessionsData) {
+          setWebinarStats({
+            count: sessionsData.length
+          })
+        }
+        
+        // Try to fetch certificates if table exists
+        try {
+          const { data: certificatesData, error: certificatesError } = await supabase
+            .from('certificates')
+            .select('id')
+          
+          if (!certificatesError) {
+            setCertificateStats({
+              count: certificatesData?.length || 0
+            })
+          }
+        } catch (error) {
+          console.log('Certificates table may not exist yet')
+        }
+        
+        // Fetch attendance records as documents
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('session_attendance')
+          .select('id')
+        
+        if (attendanceError) {
+          console.error('Error fetching attendance:', attendanceError)
+        } else if (attendanceData) {
+          setDocumentStats({
+            count: attendanceData.length
+          })
+        }
+        
+        // Fetch recent activities (from session_attendance, enrollments, and certificates if available)
+        try {
+          // Get recent session attendance
+          const { data: attendanceData, error: attendanceError } = await supabase
+            .from('session_attendance')
+            .select('id, created_at, user_id, session_id, profiles(full_name)')
+            .order('created_at', { ascending: false })
+            .limit(3)
+          
+          if (!attendanceError && attendanceData) {
+            const attendanceActivities = attendanceData.map(item => ({
+              id: item.id,
+              type: 'attendance',
+              description: 'Marked attendance',
+              user: item.profiles ? (item.profiles as any).full_name || 'Unknown User' : 'Unknown User',
+              timestamp: new Date(item.created_at).toLocaleString()
+            }))
+            
+            // Get recent enrollments
+            const { data: enrollmentData, error: enrollmentError } = await supabase
+              .from('enrollments')
+              .select('id, created_at, user_id, session_id, profiles(full_name)')
+              .order('created_at', { ascending: false })
+              .limit(3)
+            
+            const enrollmentActivities = !enrollmentError && enrollmentData ? 
+              enrollmentData.map(item => ({
+                id: item.id,
+                type: 'enrollment',
+                description: 'Enrolled in webinar',
+                user: item.profiles ? (item.profiles as any).full_name || 'Unknown User' : 'Unknown User',
+                timestamp: new Date(item.created_at).toLocaleString()
+              })) : []
+            
+            // Try to get certificate activities if table exists
+            let certificateActivities: Array<{
+              id: string;
+              type: string;
+              description: string;
+              user: string;
+              timestamp: string;
+            }> = []
+            try {
+              const { data: certificateData, error: certificateError } = await supabase
+                .from('certificates')
+                .select('id, created_at, user_id, profiles(full_name)')
+                .order('created_at', { ascending: false })
+                .limit(3)
+              
+              if (!certificateError && certificateData) {
+                certificateActivities = certificateData.map(item => ({
+                  id: item.id,
+                  type: 'certificate',
+                  description: 'Earned certificate',
+                  user: item.profiles ? (item.profiles as any).full_name || 'Unknown User' : 'Unknown User',
+                  timestamp: new Date(item.created_at).toLocaleString()
+                }))
+              }
+            } catch (error) {
+              console.log('Certificates table may not exist yet')
+            }
+            
+            // Combine all activities, sort by timestamp, and take the most recent 5
+            const allActivities = [...attendanceActivities, ...enrollmentActivities, ...certificateActivities]
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .slice(0, 5)
+            
+            setRecentActivities(allActivities)
+          }
+        } catch (error) {
+          console.error('Error fetching recent activities:', error)
+        }
+        
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchDashboardData()
+  }, [user?.id])
+  
+  // System status is always online for the admin dashboard
   const systemStatus = {
     status: 'Online',
     database: 'Connected',
@@ -33,223 +216,251 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
 
   return (
     <div className="space-y-8">
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : (
+      <>
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFF5E6] to-[#FFFAF0] dark:from-blue-950 dark:to-blue-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <Users className="h-12 w-12 text-blue-500" />
+            <FileText className="h-12 w-12 text-blue-500" />
           </div>
           <CardHeader className="pb-2">
-            <CardDescription className="text-gray-600 dark:text-gray-300">Documents</CardDescription>
-            <CardTitle className="text-3xl font-bold">1390</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">Attendance Records</CardDescription>
+            <CardTitle className="text-3xl font-bold">{documentStats.count}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between text-sm">
-              <div>
-                <span className="text-blue-500 font-medium">2.1 GB</span>
-                <span className="text-gray-600 dark:text-gray-300 ml-1">used</span>
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '35%' }}></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">35% of storage used</p>
-            </div>
+            {/* Card content intentionally left empty */}
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300">
-              <Users className="mr-2 h-4 w-4 text-blue-500" />
-              Manage Documents
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300"
+              onClick={() => window.location.href = '/dashboard/attendance'}
+            >
+              <FileText className="mr-2 h-4 w-4 text-blue-500" />
+              Manage Attendance
             </Button>
           </CardFooter>
         </Card>
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#F0F9FF] to-[#E6F7FF] dark:from-green-950 dark:to-green-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <BookOpen className="h-12 w-12 text-green-500" />
+            <Calendar className="h-12 w-12 text-green-500" />
           </div>
           <CardHeader className="pb-2">
-            <CardDescription className="text-gray-600 dark:text-gray-300">Images</CardDescription>
-            <CardTitle className="text-3xl font-bold">5678</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">Webinar Sessions</CardDescription>
+            <CardTitle className="text-3xl font-bold">{webinarStats.count}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between text-sm">
-              <div>
-                <span className="text-green-500 font-medium">3.8 GB</span>
-                <span className="text-gray-600 dark:text-gray-300 ml-1">used</span>
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: '62%' }}></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">62% of storage used</p>
-            </div>
+            {/* Card content intentionally left empty */}
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-green-300 text-green-700 dark:text-green-300">
-              <BookOpen className="mr-2 h-4 w-4 text-green-500" />
-              Manage Images
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-green-300 text-green-700 dark:text-green-300"
+              onClick={() => window.location.href = '/dashboard/sessions'}
+            >
+              <Calendar className="mr-2 h-4 w-4 text-green-500" />
+              Manage Webinars
             </Button>
           </CardFooter>
         </Card>
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFFBEB] to-[#FFF8E1] dark:from-amber-950 dark:to-amber-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <HardDrive className="h-12 w-12 text-amber-500" />
+            <Award className="h-12 w-12 text-amber-500" />
           </div>
           <CardHeader className="pb-2">
-            <CardDescription className="text-gray-600 dark:text-gray-300">Others</CardDescription>
-            <CardTitle className="text-3xl font-bold">234</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">Certificates</CardDescription>
+            <CardTitle className="text-3xl font-bold">{certificateStats.count}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between text-sm">
-              <div>
-                <span className="text-amber-500 font-medium">1.2 GB</span>
-                <span className="text-gray-600 dark:text-gray-300 ml-1">used</span>
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500" style={{ width: '28%' }}></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">28% of storage used</p>
-            </div>
+            {/* Card content intentionally left empty */}
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-amber-300 text-amber-700 dark:text-amber-300">
-              <Settings className="mr-2 h-4 w-4 text-amber-500" />
-              Manage Files
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-amber-300 text-amber-700 dark:text-amber-300"
+              onClick={() => window.location.href = '/dashboard/certificates/manage'}
+            >
+              <Award className="mr-2 h-4 w-4 text-amber-500" />
+              Manage Certificates
             </Button>
           </CardFooter>
         </Card>
       </div>
+      </>)}
+      
       
       {/* Administrative Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 shadow-md">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Administrative Actions</CardTitle>
-                  <CardDescription>Manage system operations and maintenance</CardDescription>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-blue-500" />
+                    <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Administrative Actions</CardTitle>
+                  </div>
+                  <CardDescription className="mt-1 text-slate-500 dark:text-slate-400">Manage system operations and maintenance</CardDescription>
                 </div>
-                <ShieldCheck className="h-5 w-5 text-blue-500" />
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-full">
+                  <ShieldCheck className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="border shadow-none">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">User Approvals</CardTitle>
-                        <Users className="h-4 w-4 text-green-500" />
+                  <div className="group relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-all duration-200 hover:shadow-md hover:translate-y-[-2px] border border-slate-100 dark:border-slate-700">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-green-500 transition-all duration-200 group-hover:w-2"></div>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
+                            <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-200">User Management</h3>
+                        </div>
+                        <Badge className="bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-400 hover:bg-green-100 transition-colors">
+                          {userStats.total} Users
+                        </Badge>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">
-                          Review and approve new user registrations
-                        </p>
-                        <Badge variant="outline">0 Pending</Badge>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <Button variant="outline" size="sm" className="w-full">
-                        Manage Approvals
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <Card className="border shadow-none">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">Reports</CardTitle>
-                        <BarChart3 className="h-4 w-4 text-pink-500" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <p className="text-sm text-muted-foreground">
-                        Generate and view system reports and analytics
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                        Manage user accounts and permissions
                       </p>
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <Button variant="outline" size="sm" className="w-full">
-                        View Reports
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors group-hover:border-green-300 dark:group-hover:border-green-800"
+                        onClick={() => window.location.href = '/dashboard/users'}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Manage Users
                       </Button>
-                    </CardFooter>
-                  </Card>
+                    </div>
+                  </div>
+                  
+                  <div className="group relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-all duration-200 hover:shadow-md hover:translate-y-[-2px] border border-slate-100 dark:border-slate-700">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-pink-500 transition-all duration-200 group-hover:w-2"></div>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-pink-100 dark:bg-pink-900/30 p-2 rounded-full">
+                            <BookOpen className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                          </div>
+                          <h3 className="font-semibold text-slate-800 dark:text-slate-200">Units Management</h3>
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                        Create and manage educational units
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2 border-pink-200 dark:border-pink-900 text-pink-700 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/30 transition-colors group-hover:border-pink-300 dark:group-hover:border-pink-800"
+                        onClick={() => window.location.href = '/dashboard/units'}
+                      >
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Manage Units
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 
-                <Card className="border shadow-none">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">Backup & Restore</CardTitle>
-                      <Database className="h-4 w-4 text-amber-500" />
+                <div className="group relative overflow-hidden rounded-lg bg-white dark:bg-slate-800 shadow-sm transition-all duration-200 hover:shadow-md hover:translate-y-[-2px] border border-slate-100 dark:border-slate-700">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 transition-all duration-200 group-hover:w-2"></div>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-full">
+                          <BarChart3 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-200">Reports</h3>
+                      </div>
+                      <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 hover:bg-amber-100 transition-colors">
+                        Available
+                      </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">
-                        Manage system backups and restoration
-                      </p>
-                      <Badge variant="outline" className="bg-green-50">Last: Never</Badge>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-0">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Backup Settings
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                      Generate and view system reports and analytics
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors group-hover:border-amber-300 dark:group-hover:border-amber-800"
+                      onClick={() => window.location.href = '/dashboard/reports'}
+                    >
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      View Reports
                     </Button>
-                  </CardFooter>
-                </Card>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
         
         <div>
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 shadow-md">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle>System Metrics</CardTitle>
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-full">
+                    <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">Recent Activity</CardTitle>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium">Database Usage</p>
-                    <p className="text-sm text-muted-foreground">5%</p>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: '5%' }}></div>
-                  </div>
+              {loading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
                 </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium">Storage Usage</p>
-                    <p className="text-sm text-muted-foreground">2%</p>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: '2%' }}></div>
-                  </div>
+              ) : recentActivities.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <div className={`p-2 rounded-full flex-shrink-0 ${
+                        activity.type === 'attendance' ? 'bg-green-100 dark:bg-green-900/30' :
+                        activity.type === 'enrollment' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                        'bg-amber-100 dark:bg-amber-900/30'
+                      }`}>
+                        {activity.type === 'attendance' ? (
+                          <CheckCircle className={`h-4 w-4 text-green-600 dark:text-green-400`} />
+                        ) : activity.type === 'enrollment' ? (
+                          <UserPlus className={`h-4 w-4 text-blue-600 dark:text-blue-400`} />
+                        ) : (
+                          <Award className={`h-4 w-4 text-amber-600 dark:text-amber-400`} />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{activity.user}</p>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{activity.timestamp}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{activity.description}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium">API Requests</p>
-                    <p className="text-sm text-muted-foreground">0/day</p>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: '0%' }}></div>
-                  </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <ClipboardX className="h-8 w-8 text-slate-400 mb-2" />
+                  <p className="text-slate-500 dark:text-slate-400">No recent activities found</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

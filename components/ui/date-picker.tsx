@@ -19,6 +19,9 @@ interface DatePickerProps {
   className?: string;
 }
 
+// Helper type to match DayPicker's expected onSelect handler
+type DayPickerOnSelectHandler = (date: Date | undefined) => void;
+
 export function DatePicker({ selected, onSelect, className }: DatePickerProps) {
   return (
     <Popover>
@@ -39,8 +42,9 @@ export function DatePicker({ selected, onSelect, className }: DatePickerProps) {
         <Calendar
           mode="single"
           selected={selected || undefined}
-          onSelect={onSelect}
-          initialFocus
+          onSelect={(date) => onSelect?.(date || null) as unknown as DayPickerOnSelectHandler}
+          initialFocus={true}
+          required={false}
         />
       </PopoverContent>
     </Popover>

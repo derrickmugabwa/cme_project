@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Calendar, CheckCircle, Clock, FileText, GraduationCap, BarChart2, Users, Video, ExternalLink } from 'lucide-react'
+import { BookOpen, Calendar, CheckCircle, Clock, FileText, GraduationCap, BarChart2, Users, Video, ExternalLink, Award } from 'lucide-react'
 import { createClient } from '@/lib/client'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -134,54 +134,139 @@ function WebinarSessionsList({ userId }: { userId: string }) {
 }
 
 export function UserDashboard({ profile, user }: UserDashboardProps) {
-  // State for user units and overall loading state
+  // State for dashboard data
   const [userUnits, setUserUnits] = useState<number>(0);
   const [loadingUnits, setLoadingUnits] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
-  
-  // Sample data for visualization - would be replaced with real data in production
-  const attendanceData = {
+  const [enrollmentData, setEnrollmentData] = useState({
+    count: 0
+  });
+  const [attendanceData, setAttendanceData] = useState({
     present: 0,
-    absent: 0,
-    excused: 0,
     total: 0,
     rate: 0
-  }
-
-  const progressData = {
-    completed: 0,
+  });
+  const [certificatesData, setCertificatesData] = useState({
+    count: 0,
     total: 0,
     percentage: 0
-  }
+  });
   
-  // Fetch user units
+  // Fetch all dashboard data
   useEffect(() => {
-    const fetchUserUnits = async () => {
+    const fetchDashboardData = async () => {
       if (!user?.id) {
         setLoading(false);
         return;
       }
       
       try {
-        setLoadingUnits(true);
         setLoading(true);
         const supabase = createClient();
-        const { data, error } = await supabase.from('user_units').select('units').eq('user_id', user.id).single();
         
-        if (error && error.code !== 'PGRST116') { // PGRST116 is 'not found'
-          console.error('Error fetching user units:', error);
+        // Fetch user units
+        const { data: unitsData, error: unitsError } = await supabase
+          .from('user_units')
+          .select('units')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (unitsError && unitsError.code !== 'PGRST116') {
+          console.error('Error fetching user units:', unitsError);
         } else {
-          setUserUnits(data?.units || 0);
+          setUserUnits(unitsData?.units || 0);
+        }
+        
+        // Fetch webinar enrollments
+        const { data: enrollmentsData, error: enrollmentsError } = await supabase
+          .from('session_enrollments')
+          .select('id')
+          .eq('user_id', user.id);
+          
+        if (enrollmentsError) {
+          console.error('Error fetching enrollments:', enrollmentsError);
+        } else {
+          setEnrollmentData({
+            count: enrollmentsData?.length || 0
+          });
+        }
+        
+        // Fetch attendance data
+        const { data: attendanceRecords, error: attendanceError } = await supabase
+          .from('session_attendance')
+          .select('id, status')
+          .eq('user_id', user.id);
+          
+        if (attendanceError) {
+          console.error('Error fetching attendance:', attendanceError);
+        } else {
+          const presentCount = attendanceRecords?.filter(record => record.status === 'approved').length || 0;
+          const totalCount = attendanceRecords?.length || 0;
+          
+          setAttendanceData({
+            present: presentCount,
+            total: totalCount,
+            rate: totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0
+          });
+        }
+        
+        // Fetch certificates data - using certificates table from migration
+        try {
+          // First check if the certificates table exists by querying it
+          const { data: certificatesRecords, error: certificatesError } = await supabase
+            .from('certificates')
+            .select('id')
+            .eq('user_id', user.id);
+            
+          if (certificatesError && certificatesError.code === '42P01') {
+            // Table doesn't exist yet, use default values
+            console.log('Certificates table not yet created, using default values');
+            setCertificatesData({
+              count: 0,
+              total: 0,
+              percentage: 0
+            });
+          } else if (certificatesError) {
+            console.error('Error fetching certificates:', certificatesError);
+            setCertificatesData({
+              count: 0,
+              total: 0,
+              percentage: 0
+            });
+          } else {
+            // Get total possible certificates (from completed sessions with attendance)
+            const { data: eligibleSessions, error: eligibleError } = await supabase
+              .from('session_attendance')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('status', 'approved');
+              
+            const totalPossible = eligibleSessions?.length || 0;
+            const earnedCount = certificatesRecords?.length || 0;
+            
+            setCertificatesData({
+              count: earnedCount,
+              total: totalPossible,
+              percentage: totalPossible > 0 ? Math.round((earnedCount / totalPossible) * 100) : 0
+            });
+          }
+        } catch (error) {
+          console.error('Unexpected error fetching certificates:', error);
+          setCertificatesData({
+            count: 0,
+            total: 0,
+            percentage: 0
+          });
         }
       } catch (error) {
-        console.error('Unexpected error fetching units:', error);
+        console.error('Unexpected error fetching dashboard data:', error);
       } finally {
         setLoadingUnits(false);
         setLoading(false);
       }
     };
     
-    fetchUserUnits();
+    fetchDashboardData();
   }, [user?.id]);
 
   // Show loading page when the entire dashboard is loading
@@ -195,19 +280,24 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFE2EC] to-[#FFF0F5] dark:from-pink-950 dark:to-pink-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <BookOpen className="h-12 w-12 text-pink-500" />
+            <Video className="h-12 w-12 text-pink-500" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">My Enrollment</CardDescription>
-            <CardTitle className="text-3xl font-bold">0</CardTitle>
+            <CardTitle className="text-3xl font-bold">{enrollmentData.count}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Courses enrolled</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Webinars enrolled</p>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-pink-300 text-pink-700 dark:text-pink-300">
-              <BookOpen className="mr-2 h-4 w-4 text-pink-500" />
-              Browse Courses
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-pink-300 text-pink-700 dark:text-pink-300"
+              onClick={() => window.location.href = '/dashboard/sessions'}
+            >
+              <Video className="mr-2 h-4 w-4 text-pink-500" />
+              Browse Webinars
             </Button>
           </CardFooter>
         </Card>
@@ -224,7 +314,12 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
             <p className="text-sm text-gray-600 dark:text-gray-300">{attendanceData.present} of {attendanceData.total} sessions attended</p>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300"
+              onClick={() => window.location.href = '/dashboard/my-attendance'}
+            >
               <Calendar className="mr-2 h-4 w-4 text-blue-500" />
               View Schedule
             </Button>
@@ -233,19 +328,24 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] dark:from-green-950 dark:to-green-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+            <Award className="h-12 w-12 text-green-500" />
           </div>
           <CardHeader className="pb-2">
-            <CardDescription className="text-gray-600 dark:text-gray-300">Course Progress</CardDescription>
-            <CardTitle className="text-3xl font-bold">{progressData.percentage}%</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">My Certificates</CardDescription>
+            <CardTitle className="text-3xl font-bold">{certificatesData.count}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 dark:text-gray-300">{progressData.completed} of {progressData.total} courses completed</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{certificatesData.count} of {certificatesData.total} certificates earned</p>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-green-300 text-green-700 dark:text-green-300">
-              <GraduationCap className="mr-2 h-4 w-4 text-green-500" />
-              View Progress
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-green-300 text-green-700 dark:text-green-300"
+              onClick={() => window.location.href = '/dashboard/certificates'}
+            >
+              <Award className="mr-2 h-4 w-4 text-green-500" />
+              View Certificates
             </Button>
           </CardFooter>
         </Card>

@@ -8,8 +8,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // GET /api/sessions/[id] - Get a single session
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const { data, error } = await supabase
       .from('sessions')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     if (error) {
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PATCH /api/sessions/[id] - Update a session
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -49,16 +51,22 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       .eq('id', user.id)
       .single();
     
-    const { data: currentSession } = await supabase
+    // Check if user is admin or instructor
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'instructor')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    
+    // Get the session to update
+    const { data: existingSession, error: sessionError } = await supabase
       .from('sessions')
-      .select('created_by')
-      .eq('id', params.id)
+      .select('*')
+      .eq('id', id)
       .single();
     
     // Check permissions
     if (!profile || 
         (profile.role !== 'admin' && 
-         (profile.role !== 'faculty' || currentSession?.created_by !== user.id))) {
+         (profile.role !== 'faculty' || existingSession?.created_by !== user.id))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     
@@ -78,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         is_online: sessionData.is_online,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
     
@@ -92,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         // If session is online, create or update Teams meeting
         const meetingDetails = await teamsMeetingService.updateTeamsMeeting(user.id, {
           ...updatedSession,
-          id: params.id
+          id: id
         });
         
         return NextResponse.json({
@@ -110,10 +118,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           teamsError: teamsError.message
         });
       }
-    } else if (!updatedSession.is_online && currentSession?.teams_meeting_id) {
+    } else if (!updatedSession.is_online && existingSession?.teams_meeting_id) {
       // If session was changed from online to in-person, cancel Teams meeting
       try {
-        await teamsMeetingService.cancelTeamsMeeting(user.id, params.id);
+        await teamsMeetingService.cancelTeamsMeeting(user.id, id);
       } catch (teamsError: any) {
         console.error('Error canceling Teams meeting:', teamsError);
       }
@@ -127,8 +135,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // DELETE /api/sessions/[id] - Delete a session
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -145,7 +154,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { data: currentSession } = await supabase
       .from('sessions')
       .select('created_by, teams_meeting_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     // Check permissions
@@ -158,7 +167,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // If session has a Teams meeting, cancel it
     if (currentSession?.teams_meeting_id) {
       try {
-        await teamsMeetingService.cancelTeamsMeeting(user.id, params.id);
+        await teamsMeetingService.cancelTeamsMeeting(user.id, id);
       } catch (teamsError: any) {
         console.error('Error canceling Teams meeting:', teamsError);
       }
@@ -168,7 +177,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { error } = await supabase
       .from('sessions')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
     
     if (error) {
       throw error;

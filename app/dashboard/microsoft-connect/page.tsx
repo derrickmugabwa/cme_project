@@ -268,7 +268,7 @@ export default function MicrosoftConnectPage() {
               <Button
                 variant="default"
                 onClick={() => window.location.href = '/dashboard/sessions/create'}
-                disabled={loading || tokenExpiresAt ? tokenExpiresAt <= new Date() : false}
+                disabled={loading || (tokenExpiresAt !== null && tokenExpiresAt <= new Date())}
                 className="w-full sm:w-auto"
               >
                 <div className="flex items-center gap-2">

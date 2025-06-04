@@ -30,9 +30,9 @@ interface Session {
   teams_error: string;
 }
 
-export default function EditSessionPage({ params }: { params: { id: string } }) {
+export default function EditSessionPage({ params }: { params: Promise<{ id: string }> }) {
   // Store the ID in a variable to avoid direct access warnings
-  const sessionId = params.id;
+  const [sessionId, setSessionId] = useState<string>('');
   const router = useRouter();
   
   // State for Microsoft authentication
@@ -59,8 +59,24 @@ export default function EditSessionPage({ params }: { params: { id: string } }) 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
+  // Extract session ID from params
+  useEffect(() => {
+    const getSessionId = async () => {
+      try {
+        const { id } = await params;
+        setSessionId(id);
+      } catch (error) {
+        console.error('Error extracting session ID:', error);
+        setError('Error loading session data');
+      }
+    };
+    
+    getSessionId();
+  }, [params]);
+
   // Load session data
   useEffect(() => {
+    if (!sessionId) return; // Don't load data until we have the session ID
     async function loadSessionData() {
       try {
         // Fetch session details

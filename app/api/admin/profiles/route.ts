@@ -1,6 +1,15 @@
 import { createClient } from '@/lib/server';
 import { NextResponse } from 'next/server';
 
+// Define interface for profile with units
+interface ProfileWithUnits {
+  id: any;
+  full_name: any;
+  email: any;
+  role: any;
+  units?: number;
+}
+
 // GET /api/admin/profiles - Get all profiles with optional unit balances
 export async function GET(request: Request) {
   try {
@@ -75,7 +84,8 @@ export async function GET(request: Request) {
       
       // Add units to profiles
       profiles?.forEach(profile => {
-        profile.units = unitsMap.get(profile.id) || 0;
+        // Use type assertion to tell TypeScript that profile can have units
+        (profile as ProfileWithUnits).units = unitsMap.get(profile.id) || 0;
       });
     }
     

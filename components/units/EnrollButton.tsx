@@ -125,7 +125,8 @@ export default function EnrollButton({ sessionId, onEnrollmentChange }: EnrollBu
     );
   }
 
-  const hasEnoughUnits = enrollmentStatus?.userUnits >= enrollmentStatus?.unitRequirement;
+  // Add null check and default values to prevent undefined access
+  const hasEnoughUnits = (enrollmentStatus?.userUnits ?? 0) >= (enrollmentStatus?.unitRequirement ?? 0);
 
   return (
     <div className="space-y-2">

@@ -23,7 +23,7 @@ interface AttendanceRecord {
     title: string;
     start_time: string;
     end_time: string;
-  };
+  }[];
 }
 
 export default function AttendanceHistoryClient() {
@@ -58,8 +58,9 @@ export default function AttendanceHistoryClient() {
         
         if (error) throw error;
         
-        setAttendanceRecords(data || []);
-        setFilteredRecords(data || []);
+        // Type assertion to match the expected AttendanceRecord structure
+        setAttendanceRecords(data as unknown as AttendanceRecord[] || []);
+        setFilteredRecords(data as unknown as AttendanceRecord[] || []);
       } catch (error: any) {
         console.error('Error fetching attendance history:', error);
         setError(error.message);
@@ -77,7 +78,7 @@ export default function AttendanceHistoryClient() {
     
     if (searchTerm) {
       filtered = filtered.filter(record => 
-        record.sessions.title.toLowerCase().includes(searchTerm.toLowerCase())
+        record.sessions[0]?.title?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -177,9 +178,9 @@ export default function AttendanceHistoryClient() {
                 <CardContent className="p-4">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
-                      <h3 className="font-medium text-lg">{record.sessions.title}</h3>
+                      <h3 className="font-medium text-lg">{record.sessions[0]?.title}</h3>
                       <p className="text-sm text-gray-500">
-                        {formatDate(record.sessions.start_time)} at {formatTime(record.sessions.start_time)}
+                        {formatDate(record.sessions[0]?.start_time)} at {formatTime(record.sessions[0]?.start_time)}
                       </p>
                     </div>
                     <div>
