@@ -1,0 +1,206 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { 
+  Search, 
+  FileSpreadsheet, 
+  Download, 
+  Loader2
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+
+// Import report components
+import EnrollmentReport from "@/components/reports/enrollment-report";
+import PlaceholderReport from "@/components/reports/placeholder-report";
+import { reports, Report } from "@/components/reports/report-registry";
+
+export default function ReportsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date()
+  });
+
+  const { toast } = useToast();
+
+  // Filter reports based on search query
+  const filteredReports = reports.filter(report => 
+    report.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    report.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    report.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Generate the selected report
+  const generateReport = async () => {
+    if (!selectedReport) return;
+    setIsGenerating(true);
+    
+    try {
+      switch (selectedReport.id) {
+        case "enrollment-summary": {
+          const enrollmentReport = EnrollmentReport({
+            dateRange,
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error) => console.error(error)
+          });
+          await enrollmentReport.generateReport();
+          break;
+        }
+        default: {
+          const placeholderReport = PlaceholderReport({
+            reportId: selectedReport.id,
+            reportName: selectedReport.name,
+            dateRange,
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error) => console.error(error)
+          });
+          await placeholderReport.generateReport();
+          break;
+        }
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-10 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+          <p className="text-muted-foreground">
+            Generate and download reports for your CME platform
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2 mb-6">
+        <Search className="h-5 w-5 text-muted-foreground" />
+        <Input
+          placeholder="Search reports by name, description, or category..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1"
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredReports.map((report) => (
+          <Card 
+            key={report.id}
+            className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-1"
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    {report.icon}
+                  </div>
+                  <CardTitle className="text-lg">{report.name}</CardTitle>
+                </div>
+                <Badge variant="outline" className="capitalize">
+                  {report.category}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-sm mb-4">{report.description}</CardDescription>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-2"
+                onClick={() => {
+                  setSelectedReport(report);
+                  setIsDialogOpen(true);
+                }}
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+        
+        {filteredReports.length === 0 && (
+          <div className="col-span-full flex flex-col items-center justify-center p-10 text-center">
+            <FileSpreadsheet className="h-10 w-10 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">No reports found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search query or browse all available reports.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedReport?.icon && (
+                <span className="bg-primary/10 p-1 rounded-full">
+                  {selectedReport.icon}
+                </span>
+              )}
+              {selectedReport?.name || 'Generate Report'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedReport?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Date Range</h3>
+              <DatePickerWithRange 
+                date={dateRange} 
+                setDate={setDateRange} 
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={generateReport}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Generate Report
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

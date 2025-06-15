@@ -4,36 +4,29 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 
-const testimonials = [
-  {
-    quote: "This platform has revolutionized how I manage my continuing medical education. The certificate system and attendance tracking make it so easy to keep records of my professional development.",
-    name: "Dr. Sarah Johnson",
-    title: "Cardiologist",
-    avatar: "/images/avatars/avatar-1.png"
-  },
-  {
-    quote: "The webinar quality is exceptional, and the Microsoft Teams integration works flawlessly. I can join sessions with just one click and my attendance is automatically tracked.",
-    name: "Dr. Michael Chen",
-    title: "Pediatrician",
-    avatar: "/images/avatars/avatar-2.png"
-  },
-  {
-    quote: "As a busy surgeon, I appreciate how the platform streamlines the entire CME process. The units system is flexible, and I can easily purchase credits when needed.",
-    name: "Dr. Amara Okafor",
-    title: "Orthopedic Surgeon",
-    avatar: "/images/avatars/avatar-3.png"
-  }
-];
+interface Testimonial {
+  id: string;
+  name: string;
+  title: string;
+  quote: string;
+  avatar_url: string;
+  rating: number;
+  order_index: number;
+}
 
-export const TestimonialsSection = () => {
+interface TestimonialsSectionProps {
+  data: Testimonial[];
+}
+
+export const TestimonialsSection = ({ data }: TestimonialsSectionProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const nextTestimonial = () => {
-    setActiveIndex((prev) => (prev + 1) % testimonials.length);
+    setActiveIndex((prev) => (prev + 1) % data.length);
   };
 
   const prevTestimonial = () => {
-    setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    setActiveIndex((prev) => (prev - 1 + data.length) % data.length);
   };
 
   return (
@@ -60,7 +53,7 @@ export const TestimonialsSection = () => {
 
         <div className="max-w-4xl mx-auto">
           <div className="relative">
-            {testimonials.map((testimonial, index) => (
+            {data.map((testimonial, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: 100 }}
@@ -78,7 +71,7 @@ export const TestimonialsSection = () => {
                 <div className="flex flex-col md:flex-row gap-6 items-center">
                   <div className="relative h-20 w-20 rounded-full overflow-hidden border-4 border-blue-100 dark:border-blue-900 flex-shrink-0">
                     <Image
-                      src={testimonial.avatar}
+                      src={testimonial.avatar_url || "/images/avatars/avatar-1.png"}
                       alt={testimonial.name}
                       fill
                       className="object-cover"
@@ -92,6 +85,18 @@ export const TestimonialsSection = () => {
                     <div>
                       <h4 className="font-semibold text-lg">{testimonial.name}</h4>
                       <p className="text-gray-500 dark:text-gray-400">{testimonial.title}</p>
+                      <div className="flex items-center mt-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <svg 
+                            key={i} 
+                            className={`h-4 w-4 ${i < testimonial.rating ? "text-yellow-500" : "text-gray-300 dark:text-gray-600"}`}
+                            fill="currentColor" 
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -124,7 +129,7 @@ export const TestimonialsSection = () => {
 
             {/* Indicators */}
             <div className="flex justify-center gap-2 mt-6">
-              {testimonials.map((_, index) => (
+              {data.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setActiveIndex(index)}

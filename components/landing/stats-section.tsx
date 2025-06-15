@@ -3,21 +3,27 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const stats = [
-  { label: "Medical Professionals", value: 5000, suffix: "+" },
-  { label: "Webinars Hosted", value: 1200, suffix: "+" },
-  { label: "Certificates Issued", value: 8500, suffix: "+" },
-  { label: "Hours of Content", value: 3000, suffix: "+" },
-];
+interface Stat {
+  id: string;
+  title: string;
+  value: number;
+  suffix: string;
+  icon: string;
+  order_index: number;
+}
 
-export const StatsSection = () => {
+interface StatsSectionProps {
+  data: Stat[];
+}
+
+export const StatsSection = ({ data }: StatsSectionProps) => {
   const [isInView, setIsInView] = useState(false);
-  const [counts, setCounts] = useState(stats.map(() => 0));
+  const [counts, setCounts] = useState(data.map(() => 0));
 
   useEffect(() => {
     if (!isInView) return;
 
-    const intervals = stats.map((stat, index) => {
+    const intervals = data.map((stat, index) => {
       const duration = 2000; // 2 seconds for the count animation
       const interval = Math.floor(duration / stat.value);
       
@@ -49,12 +55,21 @@ export const StatsSection = () => {
           transition={{ duration: 0.6 }}
           onViewportEnter={() => setIsInView(true)}
         >
-          {stats.map((stat, index) => (
+          {data.map((stat, index) => (
             <div key={index} className="p-6">
+              <div className="flex justify-center mb-3">
+                {stat.icon && (
+                  <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={stat.icon} />
+                    </svg>
+                  </div>
+                )}
+              </div>
               <div className="mb-2 text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 {counts[index].toLocaleString()}{stat.suffix}
               </div>
-              <p className="text-gray-600 dark:text-gray-400">{stat.label}</p>
+              <p className="text-gray-600 dark:text-gray-400">{stat.title}</p>
             </div>
           ))}
         </motion.div>

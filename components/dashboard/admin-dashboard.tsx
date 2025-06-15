@@ -288,7 +288,7 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
               variant="outline" 
               size="sm" 
               className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-amber-300 text-amber-700 dark:text-amber-300"
-              onClick={() => window.location.href = '/dashboard/certificates/manage'}
+              onClick={() => window.location.href = '/dashboard/certificates'}
             >
               <Award className="mr-2 h-4 w-4 text-amber-500" />
               Manage Certificates
@@ -342,7 +342,7 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-2 border-green-200 dark:border-green-900 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors group-hover:border-green-300 dark:group-hover:border-green-800"
-                        onClick={() => window.location.href = '/dashboard/users'}
+                        onClick={() => window.location.href = '/dashboard/admin/users'}
                       >
                         <Users className="mr-2 h-4 w-4" />
                         Manage Users
@@ -368,7 +368,7 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-2 border-pink-200 dark:border-pink-900 text-pink-700 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/30 transition-colors group-hover:border-pink-300 dark:group-hover:border-pink-800"
-                        onClick={() => window.location.href = '/dashboard/units'}
+                        onClick={() => window.location.href = '/dashboard/admin/units'}
                       >
                         <BookOpen className="mr-2 h-4 w-4" />
                         Manage Units

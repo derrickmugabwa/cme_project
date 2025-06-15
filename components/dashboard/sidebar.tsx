@@ -132,10 +132,16 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose
               </NavItem>
             )}
             {userRole === 'admin' && (
-              <NavItem href="/dashboard/admin/users">
-                <UsersRound className="h-4 w-4" />
-                User Management
-              </NavItem>
+              <>
+                <NavItem href="/dashboard/admin/users">
+                  <UsersRound className="h-4 w-4" />
+                  User Management
+                </NavItem>
+                <NavItem href="/dashboard/admin/site">
+                  <FileText className="h-4 w-4" />
+                  Site Management
+                </NavItem>
+              </>
             )}
           </div>
           

@@ -4,7 +4,21 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
-export const HeroSection = () => {
+interface HeroContent {
+  title: string;
+  subtitle: string;
+  primary_button_text: string;
+  primary_button_url: string;
+  secondary_button_text: string | null;
+  secondary_button_url: string | null;
+  image_url: string | null;
+}
+
+interface HeroSectionProps {
+  data: HeroContent;
+}
+
+export const HeroSection = ({ data }: HeroSectionProps) => {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
       {/* Background gradient */}
@@ -56,32 +70,34 @@ export const HeroSection = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
-              Advance Your Medical Career
+              {data.title}
             </h1>
             
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-lg">
-              Access high-quality webinars, track your attendance, earn certificates, and manage your CME credits all in one place.
+              {data.subtitle}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mt-4">
-              <Link href="/auth/sign-up" passHref>
+              <Link href={data.primary_button_url} passHref>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all"
                 >
-                  Get Started
+                  {data.primary_button_text}
                 </motion.button>
               </Link>
-              <Link href="/auth/login" passHref>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
-                >
-                  Sign In
-                </motion.button>
-              </Link>
+              {data.secondary_button_text && data.secondary_button_url && (
+                <Link href={data.secondary_button_url} passHref>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                  >
+                    {data.secondary_button_text}
+                  </motion.button>
+                </Link>
+              )}
             </div>
           </motion.div>
           
@@ -96,7 +112,7 @@ export const HeroSection = () => {
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 rounded-2xl transform rotate-3"></div>
               <div className="absolute inset-0 bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
                 <Image
-                  src="/images/hero-dashboard.png"
+                  src={data.image_url || "/images/hero-dashboard.png"}
                   alt="CME Platform Dashboard"
                   fill
                   className="object-cover"
