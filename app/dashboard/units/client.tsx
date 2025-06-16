@@ -11,19 +11,26 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { format } from 'date-fns';
 import { UnitTransaction } from '@/types/units';
-import { Plus, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from "@/components/ui/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function UserUnitsClient() {
   const { toast } = useToast();
+  // Initialize Supabase client
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // All useState hooks must be declared before any useEffect hooks
   const [units, setUnits] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<UnitTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
   
   // Sample data for usage chart
   const [usageData, setUsageData] = useState([
@@ -36,87 +43,150 @@ export default function UserUnitsClient() {
   // State for top-up form
   const [topupAmount, setTopupAmount] = useState<number>(10);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  // State for payment processing
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'mpesa' | 'paystack'>('mpesa');
   const [mobileNumber, setMobileNumber] = useState('');
 
-  useEffect(() => {
-    const fetchUnits = async () => {
-      try {
-        const response = await fetch('/api/units');
-        if (!response.ok) {
-          throw new Error('Failed to fetch units');
+  // Function to fetch user profile data
+  const fetchUserProfile = async () => {
+    try {
+      // Get the session from Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      // Include the access token in the request
+      const response = await fetch('/api/profile', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
+      });
+      
+      if (response.ok) {
         const data = await response.json();
-        setUnits(data.units);
-        
-        // Calculate total units purchased and used based on transactions
-        const fetchedUnits = data.units || 0;
-        
-        // We'll calculate this properly when we have the transactions
-        setUsageData([
-          { name: 'Available', value: fetchedUnits, color: '#4ade80' },
-          { name: 'Used', value: 0, color: '#f87171' }, // Will update this after fetching transactions
-        ]);
-      } catch (err) {
-        console.error('Error fetching units:', err);
-        setError('Failed to load units balance');
+        setUserEmail(data.email || '');
       }
-    };
-
-    const fetchTransactions = async () => {
-      try {
-        const response = await fetch('/api/units/transactions');
-        if (!response.ok) {
-          throw new Error('Failed to fetch transactions');
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+  
+  // Function to fetch units data
+  const fetchUnits = async () => {
+    try {
+      // Get the current session to include the access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required');
+      }
+      
+      const response = await fetch('/api/units', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
-        const data = await response.json();
-        const transactionList = data.transactions || [];
-        setTransactions(transactionList);
-        
-        // Calculate used units based on transaction history
-        let totalUsed = 0;
-        let totalAdded = 0;
-        const currentMonth = new Date().getMonth();
-        let addedThisMonth = 0;
-        
-        transactionList.forEach((transaction: UnitTransaction) => {
-          if (transaction.transaction_type === 'enrollment') {
-            // Negative amounts represent units spent
-            totalUsed += Math.abs(transaction.amount);
-          } else if (transaction.transaction_type === 'topup') {
-            // Positive amounts represent units added
-            totalAdded += transaction.amount;
-            
-            // Check if transaction is from current month
-            const transactionDate = new Date(transaction.created_at);
-            if (transactionDate.getMonth() === currentMonth) {
-              addedThisMonth += transaction.amount;
-            }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch units');
+      }
+      const data = await response.json();
+      setUnits(data.units);
+      
+      // Calculate total units purchased and used based on transactions
+      const fetchedUnits = data.units || 0;
+      
+      // We'll calculate this properly when we have the transactions
+      setUsageData([
+        { name: 'Available', value: fetchedUnits, color: '#4ade80' },
+        { name: 'Used', value: 0, color: '#f87171' }, // Will update this after fetching transactions
+      ]);
+    } catch (err) {
+      console.error('Error fetching units:', err);
+      setError('Failed to load units balance');
+    }
+  };
+
+  // Function to fetch transactions data
+  const fetchTransactions = async () => {
+    try {
+      // Get the current session to include the access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required');
+      }
+      
+      const response = await fetch('/api/units/transactions', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+      const data = await response.json();
+      const transactionList = data.transactions || [];
+      setTransactions(transactionList);
+      
+      // Calculate used units based on transaction history
+      let totalUsed = 0;
+      let totalAdded = 0;
+      const currentMonth = new Date().getMonth();
+      let addedThisMonth = 0;
+      
+      transactionList.forEach((transaction: UnitTransaction) => {
+        if (transaction.transaction_type === 'enrollment') {
+          totalUsed += Math.abs(transaction.amount);
+        } else if (transaction.transaction_type === 'topup') {
+          totalAdded += transaction.amount;
+          
+          // Check if transaction was in current month
+          const transactionDate = new Date(transaction.created_at);
+          if (transactionDate.getMonth() === currentMonth) {
+            addedThisMonth += transaction.amount;
           }
-        });
-        
-        // Calculate total units (current balance + used)
-        const totalUnits = (units || 0) + totalUsed;
-        
-        // Update chart data with actual usage statistics
-        setUsageData([
-          { name: 'Available', value: units || 0, color: '#4ade80' },
-          { name: 'Used', value: totalUsed, color: '#f87171' },
-        ]);
-        
-        // Update the monthly trend state
-        setAddedThisMonth(addedThisMonth);
-        
+        }
+      });
+      
+      // Update the usage data for the chart
+      const available = Math.max(0, totalAdded - totalUsed);
+      setUsageData([
+        { name: 'Available', value: available, color: '#4ade80' },
+        { name: 'Used', value: totalUsed, color: '#f87171' },
+      ]);
+      
+      // Update the added this month value
+      setAddedThisMonth(addedThisMonth);
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+      setError('Failed to load transaction history');
+    }
+  };
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  useEffect(() => {
+    // Fetch both units and transactions data when component mounts
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await Promise.all([fetchUnits(), fetchTransactions()]);
       } catch (err) {
-        console.error('Error fetching transactions:', err);
-        setError('Failed to load transaction history');
+        console.error('Error loading data:', err);
+        setError('Failed to load dashboard data. Please try refreshing the page.');
+        toast({
+          title: "Loading Error",
+          description: "There was a problem loading your units data. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
-
-    fetchUnits();
-    fetchTransactions();
+    
+    loadData();
   }, []);
 
   const getTransactionTypeLabel = (type: string) => {
@@ -189,14 +259,17 @@ export default function UserUnitsClient() {
 
   // Handle top-up submission
   const handleTopup = async (method: 'mpesa' | 'paystack') => {
-    if (topupAmount < 5) {
+    if (topupAmount < 1) {
       toast({
         title: "Invalid amount",
-        description: "Minimum top-up amount is 5 units",
+        description: "Minimum top-up amount is 1 unit",
         variant: "destructive",
       });
       return;
     }
+    
+    // Make sure topupAmount is treated as a number
+    const amount = Number(topupAmount);
 
     // For M-Pesa, validate mobile number
     if (method === 'mpesa' && !mobileNumber) {
@@ -210,44 +283,176 @@ export default function UserUnitsClient() {
 
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
-      // Add success logic here
-      const paymentDetails = method === 'mpesa' 
-        ? `Added ${topupAmount} units to your account via M-Pesa. Payment request sent to ${mobileNumber}`
-        : `Added ${topupAmount} units to your account via Paystack`;
+    try {
+      // Get the current session to include the access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required');
+      }
       
+      // Step 1: Create a payment transaction
+      const initResponse = await fetch('/api/units/topup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          unitsAmount: amount,
+          paymentMethod: method
+        }),
+      });
+      
+      const initData = await initResponse.json();
+      
+      if (!initResponse.ok) {
+        throw new Error(initData.error || 'Failed to initiate payment');
+      }
+      
+      // Step 2: Process payment based on method
+      if (method === 'mpesa') {
+        // Initiate M-Pesa payment
+        const mpesaResponse = await fetch('/api/payments/mpesa/initiate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            transaction_id: initData.transaction_id,
+            phone_number: mobileNumber
+          }),
+        });
+        
+        const mpesaData = await mpesaResponse.json();
+        
+        if (!mpesaResponse.ok) {
+          throw new Error(mpesaData.error || 'Failed to initiate M-Pesa payment');
+        }
+        
+        toast({
+          title: "Payment initiated",
+          description: "Please check your phone to complete the M-Pesa payment",
+        });
+        
+        // Start polling for payment status
+        pollPaymentStatus(initData.transaction_id);
+        
+        // Reset mobile number after initiating payment
+        setMobileNumber('');
+      } else {
+        // Get the current session to include the access token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Authentication required');
+        }
+        
+        // Initiate Paystack payment
+        const paystackResponse = await fetch('/api/payments/paystack/initiate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            transaction_id: initData.transaction_id,
+            email: userEmail || 'user@example.com' // Use the email from user profile
+          }),
+        });
+        
+        const paystackData = await paystackResponse.json();
+        
+        if (!paystackResponse.ok) {
+          throw new Error(paystackData.error || 'Failed to initiate Paystack payment');
+        }
+        
+        // Redirect to Paystack payment page
+        window.location.href = paystackData.authorization_url;
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
       toast({
-        title: "Top-up successful",
-        description: paymentDetails,
+        title: "Payment failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
       });
       setIsProcessing(false);
-      // Refresh units data after successful payment
-      setLoading(true);
-      // In a real implementation, we would call an API to fetch updated units
-      // For now, just simulate a refresh by updating the units value
-      setTimeout(() => {
-        setUnits((prev) => (prev || 0) + topupAmount);
+    }
+  };
+  
+  // Poll payment status for M-Pesa
+  
+  // Poll payment status for M-Pesa
+  const pollPaymentStatus = async (transactionId: string) => {
+    const maxAttempts = 20; // Increased from 10 to 20 attempts
+    let attempts = 0;
+    
+    const checkStatus = async () => {
+      try {
+        // Get the current session to include the access token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Authentication required');
+        }
         
-        // Add a new transaction to the list
-        const newTransaction: UnitTransaction = {
-          id: `tx-${Date.now()}`,
-          user_id: 'current-user', // In a real app, this would be the actual user ID
-          amount: topupAmount,
-          transaction_type: 'topup',
-          notes: method === 'mpesa' ? `Top-up via M-Pesa (${mobileNumber})` : 'Top-up via Paystack',
-          created_at: new Date().toISOString()
-        };
+        const response = await fetch(`/api/payments/status?transaction_id=${transactionId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+        const data = await response.json();
         
-        setTransactions(prev => [newTransaction, ...prev]);
-        setLoading(false);
-      }, 500);
-      
-      // Reset mobile number after successful payment
-      if (method === 'mpesa') {
-        setMobileNumber('');
+        if (data.transaction?.status === 'completed') {
+          // Payment successful
+          toast({
+            title: "Payment successful",
+            description: `${data.transaction.units_purchased} units have been added to your account`,
+          });
+          setIsProcessing(false);
+          
+          // Refresh units data
+          fetchUnits();
+          fetchTransactions();
+          return;
+        } else if (data.transaction?.status === 'failed') {
+          // Payment failed
+          toast({
+            title: "Payment failed",
+            description: "Your payment could not be processed",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+        
+        // If still pending and not exceeded max attempts, check again
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000); // Check every 5 seconds
+        } else {
+          // Max attempts reached, but don't mark as failed yet
+          toast({
+            title: "Payment pending",
+            description: "Your payment is being processed. You can manually verify it below.",
+          });
+          setIsProcessing(false);
+          
+          // Payment is still being processed in the background
+          // The user will see their units update on next page refresh
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+        toast({
+          title: "Error checking payment",
+          description: "Could not verify payment status",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
       }
-    }, 2000);
+    };
+    
+    // Start checking status
+    setTimeout(checkStatus, 5000); // Wait 5 seconds before first check
   };
 
   return (
@@ -355,9 +560,13 @@ export default function UserUnitsClient() {
                   <Input
                     id="amount"
                     type="number"
-                    min="5"
+                    min="1"
+                    step="1"
                     value={topupAmount}
-                    onChange={(e) => setTopupAmount(parseInt(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      setTopupAmount(isNaN(value) ? 0 : value);
+                    }}
                     className="pr-16"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center">
@@ -476,7 +685,7 @@ export default function UserUnitsClient() {
                   handleTopup(selectedPaymentMethod);
                 }}
                 className="w-full mt-4"
-                disabled={isProcessing || topupAmount < 5 || (selectedPaymentMethod === 'mpesa' && !mobileNumber)}
+                disabled={isProcessing || topupAmount < 1 || (selectedPaymentMethod === 'mpesa' && !mobileNumber)}
                 size="lg"
               >
                 {isProcessing ? (
@@ -494,6 +703,8 @@ export default function UserUnitsClient() {
                   </div>
                 )}
               </Button>
+              
+              {/* Payment processing happens automatically */}
               
               {/* Payment Info */}
               <div className="text-xs text-muted-foreground text-center pt-2">

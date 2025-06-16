@@ -1,13 +1,23 @@
-import { createClient } from '@/lib/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/server-client';
 
 // GET /api/units/transactions - Get user's transaction history
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Get the authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid authorization header' }, { status: 401 });
+    }
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Extract the token
+    const token = authHeader.split(' ')[1];
+    
+    // Create Supabase client with service role to bypass RLS
+    const supabase = createServerSupabaseClient();
+    
+    // Verify the token and get user
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
       return NextResponse.json(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/server-client';
 
-// GET /api/units - Get current user's unit balance
+// Payment status check endpoint
 export async function GET(request: NextRequest) {
   try {
     // Get the authorization header
@@ -26,29 +26,47 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Get the user's units
-    const { data: userUnits, error: unitsError } = await supabase
-      .from('user_units')
-      .select('units')
-      .eq('user_id', user.id)
-      .single();
+    // Get transaction ID from query params
+    const searchParams = request.nextUrl.searchParams;
+    const transactionId = searchParams.get('transaction_id');
     
-    if (unitsError && unitsError.code !== 'PGRST116') { // Not found error
-      console.error('Error fetching user units:', unitsError);
+    if (!transactionId) {
       return NextResponse.json(
-        { error: 'Failed to fetch units' },
-        { status: 500 }
+        { error: 'Missing transaction ID' },
+        { status: 400 }
       );
     }
     
-    // If no record found, return 0 units
-    const units = userUnits?.units || 0;
+    // Get transaction details
+    const { data: transaction, error: transactionError } = await supabase
+      .from('payment_transactions')
+      .select('*')
+      .eq('id', transactionId)
+      .eq('user_id', user.id)
+      .single();
     
-    return NextResponse.json({ units });
+    if (transactionError) {
+      return NextResponse.json(
+        { error: 'Transaction not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({
+      transaction: {
+        id: transaction.id,
+        status: transaction.status,
+        units_purchased: transaction.units_purchased,
+        amount: transaction.amount,
+        payment_method: transaction.payment_method,
+        created_at: transaction.created_at,
+        updated_at: transaction.updated_at
+      }
+    });
   } catch (error) {
-    console.error('Unexpected error in units API:', error);
+    console.error('Error checking payment status:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

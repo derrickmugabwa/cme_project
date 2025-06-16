@@ -1,50 +1,42 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import { createClient } from '@supabase/supabase-js';
 
-// Create a Supabase client for use in Route Handlers (API routes)
+// Create a Supabase client for server-side operations using the service role key
+// This bypasses RLS policies and should be used carefully
 export function createServerSupabaseClient() {
-  // Get the cookies - cast to the correct type to avoid TypeScript errors
-  const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
-  
-  return createServerClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          // Access the cookie store synchronously
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          // Not needed for API routes
-        },
-        remove(name: string, options: any) {
-          // Not needed for API routes
-        },
-      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   );
 }
 
 // Create a Supabase client for use with request cookies
 export function createServerClientFromRequest(requestCookies: any) {
-  return createServerClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          const cookie = requestCookies.get(name);
-          return cookie?.value;
-        },
-        set(name: string, value: string, options: any) {
-          // Not needed for API routes
-        },
-        remove(name: string, options: any) {
-          // Not needed for API routes
-        },
-      },
+      auth: {
+        persistSession: true,
+        storageKey: 'supabase-auth',
+        storage: {
+          getItem: (name: string) => {
+            const cookie = requestCookies.get(name);
+            return cookie?.value;
+          },
+          setItem: (name: string, value: string) => {
+            // Not needed for API routes
+          },
+          removeItem: (name: string) => {
+            // Not needed for API routes
+          }
+        }
+      }
     }
   );
 }
