@@ -1,3 +1,4 @@
+import React from "react";
 import { 
   Users, 
   GraduationCap, 
@@ -12,7 +13,7 @@ export interface Report {
   name: string;
   description: string;
   category: string;
-  icon: JSX.Element;
+  icon: React.ReactElement;
 }
 
 // Registry of all available reports

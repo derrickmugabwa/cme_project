@@ -7,6 +7,22 @@ import { saveAs } from 'file-saver';
 import { DateRange } from "react-day-picker";
 import { type ToastActionElement } from "@/components/ui/toast";
 
+interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
+interface Enrollment {
+  id: string;
+  created_at: string;
+  user_id: string;
+  session_id: string;
+  status: string;
+  units_spent: number;
+  profiles: Profile;
+}
+
 type ToastProps = {
   title?: string;
   description?: string;
@@ -58,7 +74,7 @@ export async function generateEnrollmentReport({
     }
     
     // Process data for Excel
-    const worksheetData = enrollments?.map(enrollment => ({
+    const worksheetData = enrollments?.map((enrollment: any) => ({
       'Enrollment ID': enrollment.id,
       'Enrollment Date': format(new Date(enrollment.created_at), 'yyyy-MM-dd'),
       'User Name': enrollment.profiles?.full_name || 'N/A',
