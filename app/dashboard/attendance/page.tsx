@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+// Import the enhanced client component at the top
+import EnhancedAttendanceClient from './enhanced-client';
 
 export const metadata: Metadata = {
   title: 'Attendance Management',
@@ -11,10 +13,7 @@ export default function AttendancePage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Webinar Attendance</h1>
       </div>
-      <AttendanceClient />
+      <EnhancedAttendanceClient />
     </div>
   );
 }
-
-// Import the client component
-import AttendanceClient from './client';

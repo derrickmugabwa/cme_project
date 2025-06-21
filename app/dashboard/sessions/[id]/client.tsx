@@ -249,51 +249,27 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
     setJoinDialogOpen(true);
   };
 
-  // Handle joining the meeting and recording attendance
-  const handleJoinMeeting = async () => {
-    try {
-      setJoinDialogOpen(false);
+  // Handle joining the meeting (attendance recording disabled)
+  const handleJoinMeeting = () => {
+    // Close the dialog
+    setJoinDialogOpen(false);
+    
+    // Open meeting URL directly without recording attendance
+    if (session && session.teams_join_url) {
+      window.open(session.teams_join_url, '_blank');
       
-      // Record attendance check-in
-      const response = await fetch('/api/attendance/check-in', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          sessionId: sessionId
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to record attendance');
-      }
-      
-      // Show success message
+      // Show informational message
       toast({
-        title: 'Attendance Recorded',
-        description: 'Your attendance has been recorded and is pending approval',
+        title: 'Meeting Opened',
+        description: 'Attendance is now only recorded via Teams attendance reports',
         variant: 'default',
       });
-      
-      // Open meeting URL
-      if (session && session.teams_join_url) {
-        window.open(session.teams_join_url, '_blank');
-      }
-    } catch (error: any) {
-      console.error('Error recording attendance:', error);
+    } else {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to record attendance',
+        description: 'No meeting URL available for this session',
         variant: 'destructive',
       });
-      
-      // Still open the meeting URL even if attendance recording fails
-      if (session && session.teams_join_url) {
-        window.open(session.teams_join_url, '_blank');
-      }
     }
   };
 
@@ -377,10 +353,11 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
               Once you click "Join Meeting", the system will:
             </p>
             <ul className="list-disc pl-5 mt-2 text-sm text-gray-500 space-y-1">
-              <li>Record your attendance for this webinar session</li>
-              <li>Set your attendance status as "pending approval"</li>
               <li>Open the meeting link in a new tab</li>
             </ul>
+            {/* <p className="text-sm text-gray-500 mt-3 font-medium">
+              <span className="text-amber-600">Note:</span> Attendance is now only recorded through Teams attendance reports uploaded by the instructor.
+            </p> */}
           </div>
           
           <DialogFooter>

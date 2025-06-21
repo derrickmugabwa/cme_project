@@ -1,0 +1,192 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/server';
+
+/**
+ * Get session attendance settings
+ * GET /api/sessions/[id]/settings
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    // Properly handle params in Next.js App Router
+    const params = await context.params;
+    const sessionId = params.id;
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get user role
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+      
+    if (userError && userError.code !== 'PGRST116') { // PGRST116 is "not found"
+      throw userError;
+    }
+    
+    // Get session settings
+    const { data, error } = await supabase
+      .from('session_settings')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      throw error;
+    }
+    
+    // Return default settings if none exist
+    if (!data) {
+      return NextResponse.json({
+        session_id: sessionId,
+        min_attendance_minutes: 30,
+        use_percentage: true,
+        attendance_percentage: 50,
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      });
+    }
+    
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('Error fetching session settings:', error);
+    return NextResponse.json(
+      { error: error.message || 'An unknown error occurred' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Update session attendance settings
+ * PUT /api/sessions/[id]/settings
+ */
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    // Properly handle params in Next.js App Router
+    const params = await context.params;
+    const sessionId = params.id;
+    const supabase = await createClient();
+    
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Check authorization (admin or faculty only)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+      
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'faculty')) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only admins and faculty can update session settings' },
+        { status: 403 }
+      );
+    }
+    
+    // Get request body
+    const body = await request.json();
+    
+    // Validate min_attendance_minutes
+    if (typeof body.min_attendance_minutes !== 'number' || 
+        body.min_attendance_minutes < 0) {
+      return NextResponse.json(
+        { error: 'Invalid min_attendance_minutes: must be a non-negative number' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate use_percentage
+    if (typeof body.use_percentage !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Invalid use_percentage: must be a boolean' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate attendance_percentage if using percentage
+    if (body.use_percentage && (
+        typeof body.attendance_percentage !== 'number' || 
+        body.attendance_percentage <= 0 || 
+        body.attendance_percentage > 100)) {
+      return NextResponse.json(
+        { error: 'Invalid attendance_percentage: must be a number between 1 and 100' },
+        { status: 400 }
+      );
+    }
+    
+    // Check if session exists
+    const { data: session, error: sessionError } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .single();
+      
+    if (sessionError || !session) {
+      return NextResponse.json(
+        { error: 'Session not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Upsert session settings
+    const { data, error } = await supabase
+      .from('session_settings')
+      .upsert({
+        session_id: sessionId,
+        min_attendance_minutes: body.min_attendance_minutes,
+        use_percentage: body.use_percentage,
+        attendance_percentage: body.attendance_percentage,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Update eligibility for existing attendance records
+    // Note: This will trigger the check_attendance_eligibility function
+    const { error: updateError } = await supabase.rpc('recalculate_attendance_eligibility', {
+      session_id_param: sessionId,
+      min_minutes_param: body.min_attendance_minutes,
+      use_percentage_param: body.use_percentage,
+      attendance_percentage_param: body.attendance_percentage
+    });
+    
+    if (updateError) {
+      console.error('Error updating attendance eligibility:', updateError);
+      // Continue despite error, as settings were saved successfully
+    }
+    
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('Error updating session settings:', error);
+    return NextResponse.json(
+      { error: error.message || 'An unknown error occurred' },
+      { status: 500 }
+    );
+  }
+}
