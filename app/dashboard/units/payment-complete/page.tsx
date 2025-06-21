@@ -10,10 +10,15 @@ import { createBrowserClient } from '@supabase/ssr';
 export default function PaymentCompletePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'warning'>('loading');
   const [message, setMessage] = useState('');
+  // Paystack parameters
   const reference = searchParams.get('reference');
   const trxref = searchParams.get('trxref');
+  
+  // PesaPal parameters
+  const orderTrackingId = searchParams.get('OrderTrackingId');
+  const orderMerchantReference = searchParams.get('OrderMerchantReference');
   
   // Initialize Supabase client
   const supabase = createBrowserClient(
@@ -22,41 +27,150 @@ export default function PaymentCompletePage() {
   );
   
   useEffect(() => {
+    // Track if the component is mounted to prevent state updates after unmount
+    let isMounted = true;
+    // Store interval and timeout IDs for cleanup
+    let pollIntervalId: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    // Function to clean up all timers
+    const cleanupTimers = () => {
+      if (pollIntervalId) clearInterval(pollIntervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+      pollIntervalId = null;
+      timeoutId = null;
+    };
     const verifyPayment = async () => {
-      if (!reference) {
-        setStatus('error');
-        setMessage('Invalid payment reference');
-        return;
-      }
-      
       try {
-        // Get the current session to include the access token
+        // Get the session for authentication
         const { data: { session } } = await supabase.auth.getSession();
         
-        // We need to include the auth token in the verification request
-        // even though we've made the endpoint not require auth on the server side
-        const response = await fetch(`/api/payments/paystack/verify/${reference}`, {
-          headers: {
-            'Authorization': session ? `Bearer ${session.access_token}` : ''
+        // Determine which payment method was used
+        let paymentMethod = 'unknown';
+        let response;
+        
+        if (reference) {
+          paymentMethod = 'paystack';
+          response = await fetch(`/api/payments/paystack/verify/${reference}`, {
+            headers: {
+              'Authorization': session ? `Bearer ${session.access_token}` : ''
+            }
+          });
+        } else if (orderTrackingId && orderMerchantReference) {
+          paymentMethod = 'pesapal';
+          response = await fetch(`/api/payments/pesapal/verify/${orderTrackingId}`, {
+            headers: {
+              'Authorization': session ? `Bearer ${session.access_token}` : ''
+            }
+          });
+        } else {
+          // No valid payment parameters found
+          if (isMounted) {
+            setStatus('error');
+            setMessage('Invalid payment parameters');
           }
-        });
+          return;
+        }
+        
         const data = await response.json();
         
+        console.log(`${paymentMethod} payment verification response:`, data);
+        
         if (response.ok && data.success) {
-          setStatus('success');
-          setMessage(`${data.units} units have been added to your account`);
+          // Check if the payment is completed or still pending
+          if (data.status === 'pending') {
+            if (isMounted) {
+              setStatus('loading');
+              setMessage(data.message || 'Your payment is being processed. This may take a few moments.');
+            }
+            
+            // Set up polling to check payment status every 5 seconds
+            pollIntervalId = setInterval(async () => {
+              try {
+                // Check if component is still mounted
+                if (!isMounted) {
+                  cleanupTimers();
+                  return;
+                }
+                
+                const pollResponse = paymentMethod === 'paystack'
+                  ? await fetch(`/api/payments/paystack/verify/${reference}`, {
+                      headers: { 'Authorization': session ? `Bearer ${session.access_token}` : '' }
+                    })
+                  : await fetch(`/api/payments/pesapal/verify/${orderTrackingId}`, {
+                      headers: { 'Authorization': session ? `Bearer ${session.access_token}` : '' }
+                    });
+                
+                const pollData = await pollResponse.json();
+                console.log('Payment status poll:', pollData);
+                
+                // Check if component is still mounted before updating state
+                if (!isMounted) return;
+                
+                console.log('Processing poll data:', pollData);
+                
+                // Normalize status to lowercase for case-insensitive comparison
+                const normalizedStatus = (pollData.status || '').toLowerCase();
+                
+                // Check for completed status in various formats
+                if (normalizedStatus === 'completed' || 
+                    normalizedStatus === 'complete' ||
+                    (pollData.success === true && normalizedStatus !== 'pending' && normalizedStatus !== 'failed')) {
+                  console.log('Payment completed successfully');
+                  cleanupTimers();
+                  setStatus('success');
+                  setMessage(`${pollData.units} units have been added to your account`);
+                } else if (normalizedStatus === 'failed') {
+                  console.log('Payment failed');
+                  cleanupTimers();
+                  setStatus('error');
+                  setMessage(pollData.message || 'Payment failed');
+                } else {
+                  console.log('Payment still pending, continuing to poll');
+                }
+              } catch (error) {
+                console.error('Error polling payment status:', error);
+              }
+            }, 5000); // Poll every 5 seconds
+            
+            // Clear interval after 2 minutes (24 attempts) to avoid infinite polling
+            timeoutId = setTimeout(() => {
+              if (isMounted && pollIntervalId) {
+                clearInterval(pollIntervalId);
+                setStatus('warning');
+                setMessage('Payment verification is taking longer than expected. Please check your account balance or contact support.');
+              }
+            }, 120000);
+          } else {
+            // Payment is already completed
+            if (isMounted) {
+              setStatus('success');
+              setMessage(`${data.units} units have been added to your account`);
+            }
+          }
         } else {
-          setStatus('error');
-          setMessage(data.message || 'Payment verification failed');
+          if (isMounted) {
+            setStatus('error');
+            setMessage(data.message || 'Payment verification failed');
+          }
         }
       } catch (error) {
-        setStatus('error');
-        setMessage('An error occurred while verifying your payment');
+        console.error('Error verifying payment:', error);
+        if (isMounted) {
+          setStatus('error');
+          setMessage('An error occurred while verifying payment');
+        }
       }
     };
     
     verifyPayment();
-  }, [reference]);
+    
+    // Cleanup function to prevent memory leaks and state updates after unmount
+    return () => {
+      isMounted = false;
+      cleanupTimers();
+    };
+  }, [reference, orderTrackingId, orderMerchantReference, router, supabase]);
   
   return (
     <div className="flex items-center justify-center h-[90vh] p-4 mt-[-5vh]">

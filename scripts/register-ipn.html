@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PesaPal IPN Registration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #e9f7ef;
+            border-left: 4px solid #2ecc71;
+            display: none;
+        }
+        .error {
+            background-color: #fdedec;
+            border-left: 4px solid #e74c3c;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PesaPal IPN Registration</h1>
+        <p>Use this form to register your IPN URL with PesaPal and get an IPN ID.</p>
+        
+        <div class="form-group">
+            <label for="consumer-key">Consumer Key:</label>
+            <input type="text" id="consumer-key" placeholder="Your PesaPal consumer key">
+        </div>
+        
+        <div class="form-group">
+            <label for="consumer-secret">Consumer Secret:</label>
+            <input type="password" id="consumer-secret" placeholder="Your PesaPal consumer secret">
+        </div>
+        
+        <div class="form-group">
+            <label for="environment">Environment:</label>
+            <select id="environment">
+                <option value="sandbox">Sandbox</option>
+                <option value="production">Production</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="ipn-url">IPN URL:</label>
+            <input type="text" id="ipn-url" value="https://061a-102-219-210-201.ngrok-free.app/api/payments/pesapal/ipn">
+        </div>
+        
+        <button id="register-btn">Register IPN URL</button>
+        
+        <div id="result" class="result">
+            <h3>Registration Result:</h3>
+            <pre id="result-content"></pre>
+            
+            <div id="env-variables" style="margin-top: 15px;">
+                <h3>Add to your .env.local file:</h3>
+                <pre id="env-content"></pre>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('register-btn').addEventListener('click', async () => {
+            const consumerKey = document.getElementById('consumer-key').value;
+            const consumerSecret = document.getElementById('consumer-secret').value;
+            const environment = document.getElementById('environment').value;
+            const ipnUrl = document.getElementById('ipn-url').value;
+            
+            if (!consumerKey || !consumerSecret || !ipnUrl) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('result-content');
+            const envContent = document.getElementById('env-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.classList.remove('error');
+                resultContent.textContent = 'Getting authentication token...';
+                
+                // Determine base URL based on environment
+                const baseUrl = environment === 'production'
+                    ? 'https://pay.pesapal.com/v3'
+                    : 'https://cybqa.pesapal.com/pesapalv3';
+                
+                // Step 1: Get authentication token
+                const tokenResponse = await fetch(`${baseUrl}/api/Auth/RequestToken`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        consumer_key: consumerKey,
+                        consumer_secret: consumerSecret,
+                    }),
+                });
+                
+                if (!tokenResponse.ok) {
+                    throw new Error(`Failed to get token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+                }
+                
+                const tokenData = await tokenResponse.json();
+                const token = tokenData.token;
+                
+                resultContent.textContent = 'Authentication token obtained. Registering IPN URL...';
+                
+                // Step 2: Register IPN URL
+                const ipnResponse = await fetch(`${baseUrl}/api/URLSetup/RegisterIPN`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        url: ipnUrl,
+                        ipn_notification_type: 'GET',
+                    }),
+                });
+                
+                if (!ipnResponse.ok) {
+                    throw new Error(`Failed to register IPN: ${ipnResponse.status} ${ipnResponse.statusText}`);
+                }
+                
+                const ipnData = await ipnResponse.json();
+                const ipnId = ipnData.ipn_id;
+                
+                resultContent.textContent = `✅ IPN registration successful!\nYour IPN ID: ${ipnId}`;
+                
+                // Generate environment variables
+                const callbackUrl = ipnUrl.replace('/api/payments/pesapal/ipn', '/dashboard/units/payment-complete');
+                envContent.textContent = `PESAPAL_CONSUMER_KEY=${consumerKey}\nPESAPAL_CONSUMER_SECRET=${consumerSecret}\nPESAPAL_ENVIRONMENT=${environment}\nPESAPAL_IPN_ID=${ipnId}\nPESAPAL_CALLBACK_URL=${callbackUrl}`;
+                
+            } catch (error) {
+                resultDiv.classList.add('error');
+                resultContent.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

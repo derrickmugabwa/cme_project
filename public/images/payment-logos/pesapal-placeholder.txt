@@ -1,0 +1,3 @@
+This is a placeholder for the PesaPal logo.
+Please replace this with an actual PesaPal logo image file (pesapal.png).
+The logo should be approximately the same size as the other payment logos in this directory.

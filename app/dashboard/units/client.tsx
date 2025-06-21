@@ -41,11 +41,11 @@ export default function UserUnitsClient() {
   // Track units added this month for trend display
   const [addedThisMonth, setAddedThisMonth] = useState(0);
   // State for top-up form
-  const [topupAmount, setTopupAmount] = useState<number>(10);
+  const [topupAmount, setTopupAmount] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  // State for payment processing
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'mpesa' | 'paystack'>('mpesa');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'mpesa' | 'paystack' | 'pesapal'>('pesapal');
+  const [unitCost, setUnitCost] = useState<{cost_per_unit: number, currency: string}>({cost_per_unit: 1.00, currency: 'KES'});
+  const [calculatedCost, setCalculatedCost] = useState<string>('0.00');
 
   // Function to fetch user profile data
   const fetchUserProfile = async () => {
@@ -162,8 +162,43 @@ export default function UserUnitsClient() {
     }
   };
 
+  // Function to fetch unit cost
+  const fetchUnitCost = async () => {
+    try {
+      const { data } = await supabase.rpc('get_current_unit_cost');
+      
+      if (data) {
+        setUnitCost({
+          cost_per_unit: parseFloat(data.cost_per_unit),
+          currency: data.currency
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching unit cost:', err);
+      // Use default values if there's an error
+      setUnitCost({
+        cost_per_unit: 1.00,
+        currency: 'KES'
+      });
+    }
+  };
+  
+  // Calculate cost whenever unit amount changes
+  useEffect(() => {
+    if (topupAmount > 0 && unitCost) {
+      const total = topupAmount * unitCost.cost_per_unit;
+      setCalculatedCost(total.toFixed(2));
+    } else {
+      setCalculatedCost('0.00');
+    }
+  }, [topupAmount, unitCost]);
+  
+  // Initial data fetch
   useEffect(() => {
     fetchUserProfile();
+    fetchUnits();
+    fetchTransactions();
+    fetchUnitCost();
   }, []);
 
   useEffect(() => {
@@ -258,7 +293,7 @@ export default function UserUnitsClient() {
   }
 
   // Handle top-up submission
-  const handleTopup = async (method: 'mpesa' | 'paystack') => {
+  const handleTopup = async (method: 'mpesa' | 'paystack' | 'pesapal') => {
     if (topupAmount < 1) {
       toast({
         title: "Invalid amount",
@@ -271,13 +306,10 @@ export default function UserUnitsClient() {
     // Make sure topupAmount is treated as a number
     const amount = Number(topupAmount);
 
-    // For M-Pesa, validate mobile number
-    if (method === 'mpesa' && !mobileNumber) {
-      toast({
-        title: "Missing mobile number",
-        description: "Please enter your M-Pesa mobile number",
-        variant: "destructive",
-      });
+    // For M-Pesa, validate mobile number (temporarily disabled)
+    if (method === 'mpesa') {
+      // M-Pesa is currently hidden from UI
+      // Will be re-enabled in the future
       return;
     }
 
@@ -310,7 +342,7 @@ export default function UserUnitsClient() {
       }
       
       // Step 2: Process payment based on method
-      if (method === 'mpesa') {
+      if (method === 'mpesa' as 'mpesa' | 'paystack' | 'pesapal') {
         // Initiate M-Pesa payment
         const mpesaResponse = await fetch('/api/payments/mpesa/initiate', {
           method: 'POST',
@@ -320,7 +352,7 @@ export default function UserUnitsClient() {
           },
           body: JSON.stringify({
             transaction_id: initData.transaction_id,
-            phone_number: mobileNumber
+            phone_number: '07XXXXXXXX' // Placeholder, M-Pesa is temporarily disabled
           }),
         });
         
@@ -338,9 +370,9 @@ export default function UserUnitsClient() {
         // Start polling for payment status
         pollPaymentStatus(initData.transaction_id);
         
-        // Reset mobile number after initiating payment
-        setMobileNumber('');
-      } else {
+        // M-Pesa mobile number handling is temporarily disabled
+        // Will be re-enabled in the future
+      } else if (method === 'paystack') {
         // Get the current session to include the access token
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -368,6 +400,34 @@ export default function UserUnitsClient() {
         
         // Redirect to Paystack payment page
         window.location.href = paystackData.authorization_url;
+      } else if (method === 'pesapal') {
+        // Get the current session to include the access token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Authentication required');
+        }
+        
+        // Initiate PesaPal payment
+        const pesapalResponse = await fetch('/api/payments/pesapal/initiate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            transaction_id: initData.transaction_id,
+            email: userEmail || 'user@example.com' // Use the email from user profile
+          }),
+        });
+        
+        const pesapalData = await pesapalResponse.json();
+        
+        if (!pesapalResponse.ok) {
+          throw new Error(pesapalData.error || 'Failed to initiate PesaPal payment');
+        }
+        
+        // Redirect to PesaPal payment page
+        window.location.href = pesapalData.authorization_url;
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -380,9 +440,7 @@ export default function UserUnitsClient() {
     }
   };
   
-  // Poll payment status for M-Pesa
-  
-  // Poll payment status for M-Pesa
+  // Poll payment status for M-Pesa and other payment methods
   const pollPaymentStatus = async (transactionId: string) => {
     const maxAttempts = 20; // Increased from 10 to 20 attempts
     let attempts = 0;
@@ -577,72 +635,56 @@ export default function UserUnitsClient() {
                 </div>
               </div>
               
+              {/* Calculated Cost Display */}
+              <div className="mt-2">
+                <div className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded-md">
+                  <span className="text-sm font-medium">Total Cost:</span>
+                  <span className="text-sm font-bold">{calculatedCost} {unitCost.currency}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 text-right">
+                  Rate: {unitCost.cost_per_unit} {unitCost.currency} per unit
+                </p>
+              </div>
 
-              {/* Payment Method Selection */}
+              {/* Payment Method */}
               <div>
-                <h3 className="text-sm font-medium mb-3">Select Payment Method</h3>
+                <h3 className="text-sm font-medium mb-3">Payment Method</h3>
                 <RadioGroup
-                  value={selectedPaymentMethod}
+                  value="pesapal" // Default to PesaPal
                   name="payment-method"
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                  onValueChange={(value: string) => {
-                    // Update selected payment method
-                    setSelectedPaymentMethod(value as 'mpesa' | 'paystack');
+                  className="grid grid-cols-1 gap-4"
+                  onValueChange={(value: 'mpesa' | 'paystack' | 'pesapal') => {
+                    // Always use PesaPal
+                    setSelectedPaymentMethod('pesapal');
                   }}
                 >
-                  {/* M-Pesa Payment Option */}
+                  {/* PesaPal Payment Option - Only visible option */}
                   <div className="relative">
                     <RadioGroupItem
-                      value="mpesa"
-                      id="mpesa"
+                      value="pesapal"
+                      id="pesapal"
                       className="peer sr-only"
+                      checked
                     />
                     <Label
-                      htmlFor="mpesa"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-[140px]"
+                      htmlFor="pesapal"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-primary bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-[140px]"
                     >
                       <div className="w-full h-full flex flex-col items-center justify-center">
-                        <div className="flex-1 flex items-center justify-center py-4">
-                          <Image
-                            src="/images/payment-logos/mpesa.png"
-                            alt="M-Pesa"
-                            width={180}
-                            height={60}
-                            className="h-16 w-auto object-contain"
-                            priority
-                          />
-                        </div>
-                        <div className="text-center text-xs text-muted-foreground">
-                          Pay directly from your M-Pesa mobile money account
-                        </div>
-                      </div>
-                    </Label>
-                  </div>
-                  
-                  {/* Paystack Payment Option */}
-                  <div className="relative">
-                    <RadioGroupItem
-                      value="paystack"
-                      id="paystack"
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor="paystack"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-[140px]"
-                    >
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <div className="flex-1 flex items-center justify-center py-4">
-                          <Image
-                            src="/images/payment-logos/paystack.png"
-                            alt="Paystack"
-                            width={100}
-                            height={30}
-                            className="h-8 w-auto object-contain"
-                            priority
-                          />
-                        </div>
-                        <div className="text-center text-xs text-muted-foreground">
-                          Pay securely with credit/debit card via Paystack
+                        <div className="flex flex-col items-center justify-center space-y-0">
+                          <div>
+                            <Image
+                              src="/images/payment-logos/pesapal.png"
+                              alt="PesaPal"
+                              width={300}
+                              height={100}
+                              className="h-28 w-auto object-contain -mb-1"
+                              priority
+                            />
+                          </div>
+                          <div className="text-center text-sm font-medium -mt-1">
+                            Pay with cards, mobile money & bank via PesaPal
+                          </div>
                         </div>
                       </div>
                     </Label>
@@ -650,42 +692,14 @@ export default function UserUnitsClient() {
                 </RadioGroup>
               </div>
               
-              {/* Mobile Number Input - Only shown for M-Pesa */}
-              {selectedPaymentMethod === 'mpesa' && (
-                <div className="mt-4 mb-4">
-                  <Label htmlFor="mobileNumber" className="text-sm font-medium">
-                    M-Pesa Mobile Number
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="mobileNumber"
-                      type="tel"
-                      placeholder="e.g. 07XXXXXXXX"
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
-                      className=""
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Enter the phone number to receive the M-Pesa payment prompt
-                  </p>
-                </div>
-              )}
-              
               {/* Payment Button */}
               <Button
                 onClick={() => {
-                  // For M-Pesa, validate mobile number first
-                  if (selectedPaymentMethod === 'mpesa' && !mobileNumber) {
-                    alert('Please enter your M-Pesa mobile number');
-                    return;
-                  }
-                  
-                  // Use the state-tracked selected payment method
-                  handleTopup(selectedPaymentMethod);
+                  // Always use PesaPal
+                  handleTopup('pesapal');
                 }}
                 className="w-full mt-4"
-                disabled={isProcessing || topupAmount < 1 || (selectedPaymentMethod === 'mpesa' && !mobileNumber)}
+                disabled={isProcessing || topupAmount < 1}
                 size="lg"
               >
                 {isProcessing ? (

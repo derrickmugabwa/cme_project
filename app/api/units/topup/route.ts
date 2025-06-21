@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!paymentMethod || !['mpesa', 'paystack'].includes(paymentMethod)) {
+    if (!paymentMethod || !['mpesa', 'paystack', 'pesapal'].includes(paymentMethod)) {
       return NextResponse.json(
         { error: 'Invalid payment method' },
         { status: 400 }
