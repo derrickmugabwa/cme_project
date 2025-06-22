@@ -137,6 +137,10 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean, onClose
                   <UsersRound className="h-4 w-4" />
                   User Management
                 </NavItem>
+                <NavItem href="/dashboard/admin/payments">
+                  <BarChart2 className="h-4 w-4" />
+                  Payments Dashboard
+                </NavItem>
                 <NavItem href="/dashboard/admin/site">
                   <FileText className="h-4 w-4" />
                   Site Management

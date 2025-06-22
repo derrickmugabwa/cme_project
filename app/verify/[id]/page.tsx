@@ -122,38 +122,30 @@ export default function VerifyCertificateIdPage() {
             <div className="bg-white rounded-lg border p-6 mb-6">
               <h3 className="text-lg font-semibold mb-4 text-center">Certificate Details</h3>
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2 border-b">
-                  <span className="text-sm font-medium text-gray-600">
-                    Certificate ID:
-                  </span>
-                  <span className="text-sm sm:text-right">{result.certificate.id}</span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Certificate ID</p>
+                  <p className="font-medium">{result.certificate.id}</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2 border-b">
-                  <span className="text-sm font-medium text-gray-600">
-                    Recipient:
-                  </span>
-                  <span className="text-sm sm:text-right font-medium">
-                    {result.certificate.userFullName}
-                  </span>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground">Issued To</p>
+                  <p className="font-medium text-green-600">{result.certificate.userFullName}</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2 border-b">
-                  <span className="text-sm font-medium text-gray-600">
-                    Webinar:
-                  </span>
-                  <span className="text-sm sm:text-right">
-                    {result.certificate.sessionTitle}
-                  </span>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground">Training Title</p>
+                  <p className="font-medium">{result.certificate.sessionTitle}</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2">
-                  <span className="text-sm font-medium text-gray-600">
-                    Issued Date:
-                  </span>
-                  <span className="text-sm sm:text-right">
-                    {format(
-                      new Date(result.certificate.issuedAt),
-                      'MMMM dd, yyyy'
-                    )}
-                  </span>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground">Issued Date</p>
+                  <p className="font-medium">
+                    {format(new Date(result.certificate.issuedAt), 'MMMM dd, yyyy')}
+                  </p>
+                </div>
+                
+                <div className="pt-2 mt-2 border-t">
+                  <p className="text-sm font-medium">This certificate confirms that the individual named above has successfully completed the required training according to ISO 15189:2022 standards.</p>
                 </div>
               </div>
             </div>

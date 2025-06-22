@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Search, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -19,12 +19,16 @@ type VerificationResult = {
   message?: string;
 };
 
-export function CertificateVerifier() {
-  const [certificateNumber, setCertificateNumber] = useState('');
+type CertificateVerifierProps = {
+  initialCertificateNumber?: string;
+};
+
+export function CertificateVerifier({ initialCertificateNumber = '' }: CertificateVerifierProps) {
+  const [certificateNumber, setCertificateNumber] = useState(initialCertificateNumber);
   const [isVerifying, setIsVerifying] = useState(false);
   const [result, setResult] = useState<VerificationResult | null>(null);
-
-  const handleVerify = async () => {
+  
+  const handleVerify = useCallback(async () => {
     if (!certificateNumber.trim()) return;
 
     try {
@@ -52,7 +56,16 @@ export function CertificateVerifier() {
     } finally {
       setIsVerifying(false);
     }
-  };
+  }, [certificateNumber]);
+
+  // Auto-verify when initialCertificateNumber is provided
+  useEffect(() => {
+    if (initialCertificateNumber) {
+      handleVerify();
+    }
+  }, [initialCertificateNumber, handleVerify]);
+
+
 
   return (
     <Card className="w-full max-w-2xl mx-auto">

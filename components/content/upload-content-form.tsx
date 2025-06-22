@@ -58,33 +58,16 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [contentType, setContentType] = useState<string>('')
-  const [courseId, setCourseId] = useState<string>('')
   const [departmentId, setDepartmentId] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [courses, setCourses] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   
   const router = useRouter()
   const supabase = createClient()
   
-  // Fetch courses taught by the faculty
+  // Fetch departments
   useEffect(() => {
-    const fetchCourses = async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('faculty_id', userId)
-        .eq('is_active', true)
-      
-      if (error) {
-        console.error('Error fetching courses:', error)
-        return
-      }
-      
-      setCourses(data || [])
-    }
-    
     const fetchDepartments = async () => {
       const { data, error } = await supabase
         .from('departments')
@@ -98,9 +81,8 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       setDepartments(data || [])
     }
     
-    fetchCourses()
     fetchDepartments()
-  }, [supabase, userId])
+  }, [supabase])
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -178,7 +160,6 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
           file_size: file.size,
           content_type: contentType,
           faculty_id: userId,
-          course_id: courseId && courseId !== 'none' ? courseId : null,
           department_id: departmentId && departmentId !== 'none' ? departmentId : null,
           is_published: true
         })
@@ -196,7 +177,6 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       setTitle('')
       setDescription('')
       setContentType('')
-      setCourseId('')
       setDepartmentId('')
       setFile(null)
       
@@ -261,7 +241,6 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
           file_size: file.size,
           content_type: contentType || 'other',
           faculty_id: userId,
-          course_id: courseId && courseId !== 'none' ? courseId : null,
           department_id: departmentId && departmentId !== 'none' ? departmentId : null,
           is_published: true // Always publish as available
         })
@@ -364,21 +343,6 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
                 <CardDescription>Organize your content for easier discovery</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="course">Course (Optional)</Label>
-                  <Select value={courseId} onValueChange={setCourseId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="department">Department (Optional)</Label>
                   <Select value={departmentId} onValueChange={setDepartmentId}>

@@ -64,6 +64,26 @@ export async function GET(request: NextRequest) {
     
     // Format certificate data
     const baseUrl = new URL(request.url).origin;
+    
+    // Get session location if available
+    const { data: sessionLocation } = await supabase
+      .from('sessions')
+      .select('location')
+      .eq('id', certificate.session_id)
+      .single();
+    
+    // Default signatories
+    const signatories = [
+      {
+        name: 'Richard Barasa',
+        title: 'QA Manager Int\'l Bv & Lead Trainer'
+      },
+      {
+        name: 'Daniel Obara',
+        title: 'SBU HR - International Business'
+      }
+    ];
+    
     const certificateData = formatCertificateData({
       certificate: {
         id: certificate.id,
@@ -77,7 +97,9 @@ export async function GET(request: NextRequest) {
         title: certificate.sessions.title,
         start_time: certificate.sessions.start_time
       },
-      baseUrl
+      baseUrl,
+      location: sessionLocation?.location,
+      signatories
     });
     
     // Generate PDF

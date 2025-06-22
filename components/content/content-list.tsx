@@ -219,7 +219,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
             </CardDescription>
           </div>
           
-          {userRole === 'faculty' && (
+          {(userRole === 'faculty' || userRole === 'admin') && (
             <Button asChild>
               <a href="/dashboard/content/upload">Upload New Content</a>
             </Button>
