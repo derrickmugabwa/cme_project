@@ -4,7 +4,8 @@ import {
   GraduationCap, 
   Award, 
   Calendar, 
-  BarChart3
+  BarChart3,
+  Video
 } from "lucide-react";
 
 // Define report types
@@ -18,6 +19,13 @@ export interface Report {
 
 // Registry of all available reports
 export const reports: Report[] = [
+  {
+    id: "webinar-attendees",
+    name: "Webinar Attendees",
+    description: "Detailed report of webinar participants with registration and attendance information",
+    category: "webinar",
+    icon: <Video className="h-5 w-5" />
+  },
   {
     id: "enrollment-summary",
     name: "Enrollment Summary",

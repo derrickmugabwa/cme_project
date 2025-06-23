@@ -19,7 +19,8 @@ function detectFileEncoding(buffer: Buffer): BufferEncoding {
   
   // Check for UTF-16BE BOM
   if (buffer.length >= 2 && buffer[0] === 0xFE && buffer[1] === 0xFF) {
-    return 'utf16be';
+    // utf16be is not a valid BufferEncoding, use utf16le and handle byte order in processing
+    return 'utf16le';
   }
   
   // Default to UTF-8

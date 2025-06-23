@@ -276,9 +276,9 @@ export default function AttendanceManagement({
   const getAttendanceSourceIcon = (source: string) => {
     switch (source) {
       case 'teams_csv':
-        return <FileSpreadsheet className="h-4 w-4 text-blue-500" title="Teams CSV Upload" />;
+        return <FileSpreadsheet className="h-4 w-4 text-blue-500" aria-label="Teams CSV Upload" />;
       case 'manual':
-        return <Monitor className="h-4 w-4 text-green-500" title="Application Check-in" />;
+        return <Monitor className="h-4 w-4 text-green-500" aria-label="Application Check-in" />;
       default:
         return null;
     }

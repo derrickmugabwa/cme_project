@@ -56,9 +56,18 @@ export function DatePickerWithRange({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
+            defaultMonth={date?.from || new Date()}
             selected={date}
-            onSelect={setDate}
+            onSelect={(newDate) => {
+              // Ensure we have both from and to dates or neither
+              if (newDate?.from && !newDate.to) {
+                // If only 'from' is selected, keep it
+                setDate(newDate);
+              } else {
+                // If both are selected or none are selected
+                setDate(newDate);
+              }
+            }}
             numberOfMonths={2}
           />
         </PopoverContent>

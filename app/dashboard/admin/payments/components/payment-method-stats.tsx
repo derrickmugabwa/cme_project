@@ -36,6 +36,7 @@ type MonthlyMethodStat = {
   mpesa?: number;
   paystack?: number;
   pesapal?: number;
+  [key: string]: string | number | undefined;
 };
 
 export default function PaymentMethodStats() {

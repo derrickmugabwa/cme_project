@@ -17,15 +17,17 @@ import {
   Search, 
   FileSpreadsheet, 
   Download, 
-  Loader2
+  Loader2,
+  CalendarIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+// Using simple date inputs instead of a complex date picker
 import { DateRange } from "react-day-picker";
 
 // Import report utilities
 import { generateEnrollmentReport } from "@/components/reports/enrollment-report";
+import { generateWebinarReport } from "@/components/reports/webinar-report";
 import { generatePlaceholderReport } from "@/components/reports/placeholder-report";
 import { reports, Report } from "@/components/reports/report-registry";
 
@@ -34,10 +36,28 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date()
+  // Using separate date states for simpler handling
+  const [startDate, setStartDate] = useState<string>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  
+  // Convert to DateRange object when needed
+  const getDateRange = (): DateRange => ({
+    from: new Date(startDate),
+    to: new Date(endDate)
   });
+  
+  // Reset date range when opening the dialog
+  const handleOpenDialog = (report: Report) => {
+    setSelectedReport(report);
+    // Reset to current month
+    setStartDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    setEndDate(new Date().toISOString().split('T')[0]);
+    setIsDialogOpen(true);
+  };
 
   const { toast } = useToast();
 
@@ -55,9 +75,18 @@ export default function ReportsPage() {
     
     try {
       switch (selectedReport.id) {
+        case "webinar-attendees": {
+          await generateWebinarReport({
+            dateRange: getDateRange(),
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error: any) => console.error(error),
+            toast: { toast }
+          });
+          break;
+        }
         case "enrollment-summary": {
           await generateEnrollmentReport({
-            dateRange,
+            dateRange: getDateRange(),
             onSuccess: () => setIsDialogOpen(false),
             onError: (error: any) => console.error(error),
             toast: { toast }
@@ -68,7 +97,7 @@ export default function ReportsPage() {
           await generatePlaceholderReport({
             reportId: selectedReport.id,
             reportName: selectedReport.name,
-            dateRange,
+            dateRange: getDateRange(),
             onSuccess: () => setIsDialogOpen(false),
             onError: (error: any) => console.error(error),
             toast: { toast }
@@ -137,10 +166,7 @@ export default function ReportsPage() {
                 variant="default" 
                 size="sm" 
                 className="w-full mt-2 shadow-sm group-hover:shadow-md transition-all duration-300"
-                onClick={() => {
-                  setSelectedReport(report);
-                  setIsDialogOpen(true);
-                }}
+                onClick={() => handleOpenDialog(report)}
               >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Generate Report
@@ -181,11 +207,38 @@ export default function ReportsPage() {
           <div className="space-y-6 py-6">
             <div className="space-y-3">
               <Label className="text-base font-medium">Select Date Range</Label>
-              <DatePickerWithRange 
-                date={dateRange} 
-                setDate={setDateRange} 
-                className="w-full shadow-sm border rounded-lg" 
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="start-date" className="text-sm font-medium">Start Date</Label>
+                    <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="end-date" className="text-sm font-medium">End Date</Label>
+                    <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                    />
+                  </div>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">Select the date range for your report data</p>
             </div>
           </div>

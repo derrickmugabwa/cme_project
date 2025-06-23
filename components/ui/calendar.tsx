@@ -15,6 +15,7 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  // Navigation components are handled by the DayPicker component internally
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -53,7 +54,7 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
-      // Remove custom components to avoid type errors
+      // No custom components needed
       {...props}
     />
   )
