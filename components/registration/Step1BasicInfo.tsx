@@ -16,12 +16,16 @@ import {
 import { useRegistration } from '@/contexts/RegistrationContext';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { CountryCombobox } from '@/components/ui/country-combobox';
 
 // Validation schema for Step 1
 const schema = yup.object().shape({
   email: yup.string().email('Invalid email format').required('Email is required'),
   title: yup.string().required('Title is required'),
-  fullName: yup.string().required('Full name is required'),
+  firstName: yup.string().required('First name is required'),
+  middleName: yup.string(), // Optional field
+  surname: yup.string().required('Surname is required'),
+  idNumber: yup.string().required('ID number is required'),
   country: yup.string().required('Country is required'),
   phoneNumber: yup.string().required('Phone number is required'),
   password: yup
@@ -54,7 +58,10 @@ export function Step1BasicInfo() {
     defaultValues: {
       email: formData.email,
       title: formData.title,
-      fullName: formData.fullName,
+      firstName: formData.firstName,
+      middleName: formData.middleName,
+      surname: formData.surname,
+      idNumber: formData.idNumber,
       country: formData.country,
       phoneNumber: formData.phoneNumber,
       password: formData.password,
@@ -187,22 +194,78 @@ export function Step1BasicInfo() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="firstName">First Name</Label>
             <Controller
-              name="fullName"
+              name="firstName"
               control={control}
               render={({ field }) => (
                 <Input
-                  id="fullName"
+                  id="firstName"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="John"
                   {...field}
-                  className={errors.fullName ? 'border-red-300' : ''}
+                  className={errors.firstName ? 'border-red-300' : ''}
                 />
               )}
             />
-            {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
+            {errors.firstName && <p className="text-sm text-red-500">{errors.firstName.message}</p>}
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="middleName">Middle Name (Optional)</Label>
+            <Controller
+              name="middleName"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  id="middleName"
+                  type="text"
+                  placeholder="Middle name"
+                  {...field}
+                  className={errors.middleName ? 'border-red-300' : ''}
+                />
+              )}
+            />
+            {errors.middleName && <p className="text-sm text-red-500">{errors.middleName.message}</p>}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="surname">Surname</Label>
+            <Controller
+              name="surname"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  id="surname"
+                  type="text"
+                  placeholder="Doe"
+                  {...field}
+                  className={errors.surname ? 'border-red-300' : ''}
+                />
+              )}
+            />
+            {errors.surname && <p className="text-sm text-red-500">{errors.surname.message}</p>}
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="idNumber">ID Number</Label>
+          <Controller
+            name="idNumber"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="idNumber"
+                type="text"
+                placeholder="Enter your national ID number"
+                {...field}
+                className={errors.idNumber ? 'border-red-300' : ''}
+              />
+            )}
+          />
+          {errors.idNumber && <p className="text-sm text-red-500">{errors.idNumber.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -212,12 +275,11 @@ export function Step1BasicInfo() {
               name="country"
               control={control}
               render={({ field }) => (
-                <Input
-                  id="country"
-                  type="text"
-                  placeholder="Kenya"
-                  {...field}
-                  className={errors.country ? 'border-red-300' : ''}
+                <CountryCombobox
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search and select your country..."
+                  error={!!errors.country}
                 />
               )}
             />

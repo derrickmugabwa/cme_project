@@ -5,7 +5,10 @@ type RegistrationFormData = {
   // Step 1 - Basic Information
   email: string;
   title: string;
-  fullName: string;
+  firstName: string;
+  middleName: string;
+  surname: string;
+  idNumber: string;
   country: string;
   phoneNumber: string;
   password: string;
@@ -33,7 +36,10 @@ type RegistrationContextType = {
 const initialFormData: RegistrationFormData = {
   email: '',
   title: '',
-  fullName: '',
+  firstName: '',
+  middleName: '',
+  surname: '',
+  idNumber: '',
   country: '',
   phoneNumber: '',
   password: '',

@@ -16,6 +16,8 @@ import { format, setHours, setMinutes, addHours } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import MediaUploadZone from '@/components/sessions/MediaUploadZone';
+import { SessionMedia } from '@/types/session-media';
 
 // Supabase client will be initialized in the component
 
@@ -40,6 +42,9 @@ export default function CreateSessionPage() {
   
   // UI state
   const [loading, setLoading] = useState(false);
+  
+  // Media state
+  const [sessionMedia, setSessionMedia] = useState<SessionMedia[]>([]);
   
   // Check Microsoft auth status
   useEffect(() => {
@@ -282,6 +287,46 @@ export default function CreateSessionPage() {
           return;
         }
         
+        // Upload media files if any were staged
+        if (sessionMedia.length > 0 && result.session?.id) {
+          console.log(`Uploading ${sessionMedia.length} media files for session ${result.session.id}`);
+          
+          try {
+            const uploadPromises = sessionMedia.map(async (media) => {
+              // Only upload preview files (those with _file property)
+              if (media._file) {
+                const formData = new FormData();
+                formData.append('file', media._file);
+                formData.append('fileType', media.file_type);
+                formData.append('displayOrder', media.display_order.toString());
+
+                const uploadResponse = await fetch(`/api/sessions/${result.session.id}/media`, {
+                  method: 'POST',
+                  body: formData,
+                });
+
+                if (!uploadResponse.ok) {
+                  const errorData = await uploadResponse.json();
+                  console.error('Media upload failed:', errorData);
+                  return null;
+                }
+
+                const uploadResult = await uploadResponse.json();
+                return uploadResult.media;
+              }
+              return null;
+            });
+
+            const uploadResults = await Promise.all(uploadPromises);
+            const successfulUploads = uploadResults.filter(result => result !== null);
+            
+            console.log(`Successfully uploaded ${successfulUploads.length} out of ${sessionMedia.length} media files`);
+          } catch (mediaError) {
+            console.error('Error uploading media files:', mediaError);
+            // Don't fail the entire process if media upload fails
+          }
+        }
+        
         // Check for Teams error
         if (result.teamsError) {
           toast({
@@ -290,9 +335,10 @@ export default function CreateSessionPage() {
             description: `Webinar created, but Teams meeting creation failed: ${result.teamsError}`
           });
         } else {
+          const mediaMessage = sessionMedia.length > 0 ? ` with ${sessionMedia.length} media files` : '';
           toast({
             title: "Success",
-            description: "Webinar created successfully!"
+            description: `Webinar created successfully${mediaMessage}!`
           });
         }
         
@@ -609,6 +655,52 @@ export default function CreateSessionPage() {
                     placeholder="Enter location"
                     className="mt-1"
                   />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Media Upload Section */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Media</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload videos and images for your webinar. You can add trailers, promotional content, and visual materials.
+              </p>
+              <MediaUploadZone
+                onFilesUploaded={(files) => setSessionMedia(prev => [...prev, ...files])}
+                maxFiles={10}
+                disabled={loading}
+              />
+              
+              {sessionMedia.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Uploaded Files ({sessionMedia.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {sessionMedia.map((media, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm">
+                            {media.file_type === 'video' ? '🎥' : '🖼️'}
+                          </span>
+                          <span className="text-sm font-medium">{media.file_name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSessionMedia(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>

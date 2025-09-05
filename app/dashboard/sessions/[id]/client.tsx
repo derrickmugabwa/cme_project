@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import EnrollButton from '@/components/units/EnrollButton';
 import { LoadingPage, LoadingSpinner } from '@/components/ui/loading-spinner';
 import { SessionCertificate } from '@/components/certificates/session-certificate';
+import SessionMediaViewer from '@/components/sessions/SessionMediaViewer';
+import { PlayCircle } from 'lucide-react';
 
 interface Session {
   id: string;
@@ -622,8 +624,25 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         </Card>
       )}
       
-      {/* Status Section */}
+      {/* Session Media Section */}
       <Card>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <PlayCircle className="h-5 w-5" />
+            Session Media
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SessionMediaViewer 
+            sessionId={sessionId}
+            canEdit={currentUserRole === 'admin' || (session && session.created_by === authSession?.user?.id)}
+            userRole={currentUserRole || undefined}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Status Section */}
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="text-xl">Webinar Status</CardTitle>
         </CardHeader>

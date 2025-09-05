@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import MediaManager from '@/components/sessions/MediaManager';
+import { SessionMedia } from '@/types/session-media';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -58,6 +60,9 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  
+  // Media state
+  const [sessionMedia, setSessionMedia] = useState<SessionMedia[]>([]);
   
   // Extract session ID from params
   useEffect(() => {
@@ -403,6 +408,23 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
           </form>
         </CardContent>
       </Card>
+
+      {/* Media Management Section */}
+      {sessionId && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Session Media</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MediaManager
+              sessionId={sessionId}
+              initialMedia={sessionMedia}
+              onChange={setSessionMedia}
+              canEdit={true}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

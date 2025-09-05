@@ -59,11 +59,20 @@ export function Step2ProfessionalInfo() {
       
       const supabase = createClient();
       
+      // Construct full name from separate name fields
+      const fullName = [formData.firstName, formData.middleName, formData.surname]
+        .filter(name => name && name.trim()) // Remove empty/null values
+        .join(' ');
+      
       console.log('About to sign up user with the following data:', {
         email: formData.email,
         metadata: {
-          full_name: formData.fullName,
+          full_name: fullName,
+          first_name: formData.firstName,
+          middle_name: formData.middleName,
+          surname: formData.surname,
           title: formData.title,
+          id_number: formData.idNumber,
           country: formData.country,
           professional_cadre: data.professionalCadre,
           registration_number: data.registrationNumber,
@@ -83,8 +92,12 @@ export function Step2ProfessionalInfo() {
         options: {
           data: {
             // Include all profile data in the user metadata
-            full_name: formData.fullName,
+            full_name: fullName,
+            first_name: formData.firstName,
+            middle_name: formData.middleName,
+            surname: formData.surname,
             title: formData.title,
+            id_number: formData.idNumber,
             country: formData.country,
             professional_cadre: data.professionalCadre,
             registration_number: data.registrationNumber,
