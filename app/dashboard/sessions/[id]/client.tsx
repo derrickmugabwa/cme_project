@@ -20,6 +20,7 @@ import { PlayCircle } from 'lucide-react';
 interface Session {
   id: string;
   title: string;
+  topic: string;
   description: string;
   start_time: string;
   end_time: string;
@@ -418,6 +419,14 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
           <CardContent>
             <div className="border-t pt-4 mt-2">
               <h3 className="font-medium text-lg mb-2">{session?.title}</h3>
+              
+              {session?.topic && (
+                <div className="mb-3">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    {session.topic}
+                  </Badge>
+                </div>
+              )}
               
               {session?.description && (
                 <p className="text-gray-700 mb-4">{session.description}</p>

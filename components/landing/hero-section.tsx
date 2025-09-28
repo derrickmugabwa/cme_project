@@ -21,35 +21,153 @@ interface HeroSectionProps {
 export const HeroSection = ({ data }: HeroSectionProps) => {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20" />
+      {/* Modern multi-stop gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-mint-50 via-emerald-100 to-teal-200" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-teal-100/80 via-mint-200/60 to-emerald-50/90" />
+      <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-mint-100/40 to-teal-300/30" />
       
-      {/* Animated background shapes */}
+      {/* Noise texture overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.015] mix-blend-multiply"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
+      
+      {/* Wave patterns */}
       <div className="absolute inset-0 overflow-hidden">
-        <motion.div 
-          className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-3xl"
+        {/* Primary wave */}
+        <motion.div
+          className="absolute -top-32 -right-64 w-[800px] h-[600px] opacity-20"
           animate={{ 
-            x: [0, 10, 0], 
-            y: [0, 15, 0],
+            rotate: [0, 360],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 20,
+            ease: "linear" 
+          }}
+        >
+          <svg viewBox="0 0 800 600" className="w-full h-full">
+            <defs>
+              <linearGradient id="waveGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#14b8a6" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#0d9488" stopOpacity="0.1" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,300 Q200,200 400,300 T800,300 L800,600 L0,600 Z"
+              fill="url(#waveGradient1)"
+            />
+          </svg>
+        </motion.div>
+        
+        {/* Secondary wave */}
+        <motion.div
+          className="absolute -bottom-32 -left-64 w-[700px] h-[500px] opacity-15"
+          animate={{ 
+            rotate: [360, 0],
+            scale: [1.1, 1, 1.1]
+          }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 25,
+            ease: "linear" 
+          }}
+        >
+          <svg viewBox="0 0 700 500" className="w-full h-full">
+            <defs>
+              <linearGradient id="waveGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0d9488" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#14b8a6" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,0 L0,200 Q175,100 350,200 T700,200 L700,0 Z"
+              fill="url(#waveGradient2)"
+            />
+          </svg>
+        </motion.div>
+        
+        {/* Tertiary decorative wave */}
+        <motion.div
+          className="absolute top-1/3 right-1/4 w-[400px] h-[300px] opacity-10"
+          animate={{ 
+            x: [0, 20, 0],
+            y: [0, -15, 0]
+          }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 15,
+            ease: "easeInOut" 
+          }}
+        >
+          <svg viewBox="0 0 400 300" className="w-full h-full">
+            <defs>
+              <linearGradient id="waveGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#059669" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#0891b2" stopOpacity="0.3" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,150 Q100,100 200,150 T400,150 L400,300 L0,300 Z"
+              fill="url(#waveGradient3)"
+            />
+          </svg>
+        </motion.div>
+      </div>
+      
+      {/* Abstract geometric shapes */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Floating geometric elements */}
+        <motion.div 
+          className="absolute top-20 left-1/4 w-24 h-24 opacity-10"
+          animate={{ 
+            rotate: [0, 180, 360],
+            scale: [1, 1.2, 1]
+          }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 12,
+            ease: "easeInOut" 
+          }}
+        >
+          <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl transform rotate-45" />
+        </motion.div>
+        
+        <motion.div 
+          className="absolute bottom-1/4 right-1/3 w-16 h-16 opacity-8"
+          animate={{ 
+            y: [0, -30, 0],
+            rotate: [0, -90, 0]
           }}
           transition={{ 
             repeat: Infinity, 
             duration: 8,
             ease: "easeInOut" 
           }}
-        />
+        >
+          <div className="w-full h-full bg-gradient-to-tr from-teal-400 to-cyan-500 rounded-full" />
+        </motion.div>
+        
         <motion.div 
-          className="absolute top-1/2 -left-40 h-80 w-80 rounded-full bg-gradient-to-r from-cyan-500/20 to-teal-500/20 blur-3xl"
+          className="absolute top-1/2 left-1/5 w-20 h-20 opacity-6"
           animate={{ 
-            x: [0, -10, 0], 
-            y: [0, -15, 0],
+            x: [0, 25, 0],
+            scale: [1, 1.3, 1]
           }}
           transition={{ 
             repeat: Infinity, 
             duration: 10,
             ease: "easeInOut" 
           }}
-        />
+        >
+          <div className="w-full h-full bg-gradient-to-bl from-mint-400 to-emerald-500 transform rotate-12" 
+               style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
+        </motion.div>
       </div>
 
       <div className="container relative mx-auto px-6 z-10">
@@ -61,16 +179,25 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
             transition={{ duration: 0.8 }}
             className="flex flex-col gap-6"
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+            <div className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-sm text-green-600 dark:bg-green-900/30 dark:text-green-300">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
-              Continuing Medical Education Platform
+              <span className="text-green-600 italic">Continuing Medical Education Platform</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
-              {data.title}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-black">
+              {data.title.split(' ').map((word, index) => {
+                if (word.toLowerCase() === 'medical' || word.toLowerCase() === 'education') {
+                  return (
+                    <span key={index} className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                      {word}{' '}
+                    </span>
+                  );
+                }
+                return <span key={index}>{word} </span>;
+              })}
             </h1>
             
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-lg">
@@ -82,7 +209,7 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all"
+                  className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all"
                 >
                   {data.primary_button_text}
                 </motion.button>
@@ -92,7 +219,7 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                    className="px-6 py-3 rounded-lg bg-white text-gray-800 font-medium border border-white hover:bg-gray-50 transition-all shadow-lg"
                   >
                     {data.secondary_button_text}
                   </motion.button>
@@ -108,9 +235,16 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative"
           >
+            {/* Spotlight glow effect behind image */}
+            <div className="absolute inset-0 -m-8">
+              <div className="absolute inset-0 bg-gradient-radial from-emerald-200/40 via-teal-100/30 to-transparent rounded-full blur-3xl transform scale-110"></div>
+              <div className="absolute inset-0 bg-gradient-radial from-mint-300/30 via-emerald-200/20 to-transparent rounded-full blur-2xl transform scale-125"></div>
+            </div>
+            
             <div className="relative h-[400px] w-full">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 rounded-2xl transform rotate-3"></div>
-              <div className="absolute inset-0 bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+              {/* Subtle backdrop with premium styling */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-teal-500/15 rounded-2xl transform rotate-1 backdrop-blur-sm"></div>
+              <div className="absolute inset-0 bg-white/95 dark:bg-gray-800/95 rounded-2xl shadow-2xl shadow-emerald-500/10 overflow-hidden backdrop-blur-sm border border-white/20">
                 <Image
                   src={data.image_url || "/images/hero-dashboard.png"}
                   alt="CME Platform Dashboard"
@@ -118,6 +252,8 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
                   className="object-cover"
                   priority
                 />
+                {/* Subtle overlay for premium look */}
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/5"></div>
               </div>
             </div>
             

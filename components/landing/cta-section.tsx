@@ -28,10 +28,10 @@ export const CtaSection = ({ data }: CtaSectionProps) => {
           className="absolute inset-0 bg-cover bg-center" 
           style={{ backgroundImage: `url(${data.background_image_url})` }}
         >
-          <div className="absolute inset-0 bg-blue-900/70" /> {/* Overlay for readability */}
+          <div className="absolute inset-0 bg-emerald-900/70" /> {/* Overlay for readability */}
         </div>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600" />
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600" />
       )}
       
       {/* Animated background shapes */}
@@ -93,7 +93,7 @@ export const CtaSection = ({ data }: CtaSectionProps) => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 rounded-lg bg-white text-blue-600 font-medium shadow-lg shadow-blue-700/25 hover:shadow-blue-700/40 transition-all"
+                className="px-8 py-4 rounded-lg bg-white text-emerald-600 font-medium shadow-lg shadow-emerald-700/25 hover:shadow-emerald-700/40 transition-all"
               >
                 {data.primary_button_text}
               </motion.button>

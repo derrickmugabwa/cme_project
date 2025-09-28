@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       location: 'Nairobi, Kenya',
       standardReference: 'ISO 9001:2015',
       trainingType: 'Continuing Medical Education',
+      topic: 'Clinical Laboratory Quality Management', // Add sample topic
       signatories: [
         {
           name: 'Dr. Jane Smith',

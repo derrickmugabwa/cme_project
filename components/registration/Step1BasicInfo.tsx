@@ -393,7 +393,7 @@ export function Step1BasicInfo() {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit">Continue</Button>
+          <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">Continue</Button>
         </div>
       </form>
     </div>

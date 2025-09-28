@@ -13,6 +13,7 @@ type CertificateData = {
   verificationUrl: string;
   location?: string;
   trainingType?: string;
+  topic?: string; // Session topic/specialty
   signatories?: {
     name: string;
     title: string;
@@ -233,110 +234,175 @@ export async function generateCertificatePdf(
   const titleText = template?.title || 'Certificate of Training';
   const subtitleText = template?.subtitle || 'is hereby presented to';
   const completionText = template?.completion_text || 'For having completed and achieved the required level of competence in';
-  const qualityText = template?.quality_text || 'for establishment and sustenance of Medical Laboratories Quality';
+  const qualityText = template?.quality_text || '';
   
   // Parse colors from template or use defaults
   const titleColor = template?.title_color ? hexToRgb(template.title_color) : { r: 0, g: 0, b: 0 };
   const recipientColor = template?.recipient_color ? hexToRgb(template.recipient_color) : { r: 0, g: 150, b: 76 };
   const bodyColor = template?.body_color ? hexToRgb(template.body_color) : { r: 0, g: 0, b: 0 };
 
-  // Add title - map fonts to supported jsPDF fonts
+  // Define content area boundaries to fit within background image margins
+  const contentMarginLeft = 25;   // Left margin to fit within background
+  const contentMarginRight = 25;  // Right margin to fit within background  
+  const contentMarginTop = 25;    // Top margin to fit within background
+  const contentMarginBottom = 25; // Bottom margin to fit within background
+  const contentWidth = 297 - contentMarginLeft - contentMarginRight; // Available width
+  const centerX = 148.5; // Center of the page
+
+  // Add title - positioned with significant space below the METROPOLIS logo
   const titleFont = mapFontToSupported(template?.title_font || 'times');
   const titleFontStyle = mapFontStyleToSupported(template?.title_font_style || 'italic');
   doc.setFont(titleFont, titleFontStyle);
-  doc.setFontSize(template?.title_font_size || 36);
+  doc.setFontSize(template?.title_font_size || 32);
   doc.setTextColor(titleColor.r, titleColor.g, titleColor.b);
-  doc.text(titleText, 148.5, 40, { align: 'center' });
+  doc.text(titleText, centerX, 72, { align: 'center' }); // Moved even further down for more clearance
 
   // Add subtitle
   const bodyFont = mapFontToSupported(template?.body_font || 'times');
   const bodyFontStyle = mapFontStyleToSupported(template?.body_font_style || 'italic');
   doc.setFont(bodyFont, bodyFontStyle);
-  doc.setFontSize(template?.body_font_size || 16);
+  doc.setFontSize(template?.body_font_size || 14);
   doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
-  doc.text(subtitleText, 148.5, 65, { align: 'center' });
+  doc.text(subtitleText, centerX, 88, { align: 'center' });
 
-  // Add recipient name
+  // Add recipient name - positioned evenly between subtitle and date
+  // Convert recipient name to title case (first letters uppercase, rest lowercase)
+  const recipientName = data.userName
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
   const recipientFont = mapFontToSupported(template?.recipient_font || 'helvetica');
   const recipientFontStyle = mapFontStyleToSupported(template?.recipient_font_style || 'bold');
   doc.setFont(recipientFont, recipientFontStyle);
-  doc.setFontSize(template?.recipient_font_size || 28);
+  doc.setFontSize(template?.recipient_font_size || 24);
   doc.setTextColor(recipientColor.r, recipientColor.g, recipientColor.b);
-  doc.text(data.userName.toUpperCase(), 148.5, 85, { align: 'center' });
+  doc.text(recipientName, centerX, 105, { align: 'center' });
+  
+  // Add underline to recipient name with matching color
+  const nameWidth = doc.getTextWidth(recipientName);
+  const underlineStartX = centerX - (nameWidth / 2);
+  const underlineEndX = centerX + (nameWidth / 2);
+  const underlineY = 105 + 2; // 2mm below the text baseline
+  
+  // Set line color to match the recipient name color
+  doc.setDrawColor(recipientColor.r, recipientColor.g, recipientColor.b);
+  doc.setLineWidth(0.5); // Set line thickness
+  doc.line(underlineStartX, underlineY, underlineEndX, underlineY);
 
   // Format date with ordinal suffix (e.g., "7th March 2025")
   const formattedDate = formatDateWithOrdinal(data.sessionDate);
-  
-  // Add date - reuse bodyFont from earlier but update style
-  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
-  doc.setFontSize(template?.body_font_size || 16);
-  doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
-  doc.text(`On ${formattedDate}`, 148.5, 105, { align: 'center' });
 
-  // Define the body paragraph section with consistent spacing
-  const bodyStartY = 120;
-  const lineSpacing = template?.body_line_spacing || 8; // Default line spacing if not specified
+  // Define the body paragraph section - moved up since date is now below
+  const bodyStartY = 122;
+  const lineSpacing = template?.body_line_spacing || 5;
   let currentY = bodyStartY;
   
-  // Set consistent font size for body text
-  const bodyFontSize = template?.body_font_size || 12;
+  // Set consistent font size for body text - smaller
+  const bodyFontSize = template?.body_font_size || 10;
   doc.setFontSize(bodyFontSize);
   
-  // Add training details - first line of body paragraph
-  doc.text(completionText, 148.5, currentY, { align: 'center' });
-  currentY += lineSpacing;
+  // Create the full text but we'll render it in parts with different styles
+  // Convert session title to title case (first letters uppercase, rest lowercase)
+  const trainingTitle = data.sessionTitle
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
   
-  // Just use the session title without standard reference
-  const trainingTitle = data.sessionTitle.toUpperCase();
+  // Use a simpler approach - create the full text with explicit spacing
+  let fullText = completionText + ' ';
   
-  // Use bold style for training title but keep the same font
-  doc.setFont(bodyFont, mapFontStyleToSupported('bold'));
+  // Add session title (we'll handle bold formatting differently)
+  fullText += trainingTitle;
   
-  // Handle multi-line training title with proper spacing
-  const splitTrainingTitle = doc.splitTextToSize(trainingTitle, 200); // Wrap at 200mm width
-  doc.text(splitTrainingTitle, 148.5, currentY, { align: 'center' });
-  currentY += (splitTrainingTitle.length * lineSpacing);
-  
-  // Return to normal style for quality text
-  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
-  
-  // Add quality text with proper wrapping
-  const splitQualityText = doc.splitTextToSize(qualityText, 200);
-  doc.text(splitQualityText, 148.5, currentY, { align: 'center' });
-  currentY += (splitQualityText.length * lineSpacing);
-  
-  // Add session date information
-  const sessionMonth = data.sessionDate.split(' ')[0]; // Extract month
-  const sessionYear = new Date(data.sessionDate).getFullYear();
-  
-  // Format the date text - with or without location
-  let dateText;
-  if (data.location) {
-    dateText = `held at ${data.location} in ${sessionMonth} ${sessionYear}.`;
-  } else {
-    dateText = `held in ${sessionMonth} ${sessionYear}.`;
+  // Add quality text with explicit spacing
+  if (qualityText) {
+    fullText += '  ' + qualityText; // Use double space to ensure visibility
   }
   
-  const splitDateText = doc.splitTextToSize(dateText, 200);
-  doc.text(splitDateText, 148.5, currentY, { align: 'center' });
-  currentY += (splitDateText.length * lineSpacing);
+  // Set normal font for the base text
+  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
+  doc.setFontSize(bodyFontSize);
+  doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
+  
+  // Calculate positions for mixed formatting
+  const completionTextWidth = doc.getTextWidth(completionText + ' ');
+  
+  // Set bold font for title width calculation
+  doc.setFont(bodyFont, mapFontStyleToSupported('bold'));
+  doc.setFontSize(bodyFontSize);
+  const trainingTitleWidth = doc.getTextWidth(trainingTitle);
+  
+  // Calculate total width for centering
+  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
+  doc.setFontSize(bodyFontSize);
+  const fullTextWidth = doc.getTextWidth(fullText);
+  const startX = centerX - (fullTextWidth / 2);
+  
+  // Render completion text
+  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
+  doc.setFontSize(bodyFontSize);
+  doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
+  doc.text(completionText + ' ', startX, currentY);
+  
+  // Render session title in bold
+  doc.setFont(bodyFont, mapFontStyleToSupported('bold'));
+  doc.setFontSize(bodyFontSize);
+  doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
+  doc.text(trainingTitle, startX + completionTextWidth, currentY);
+  
+  // Render quality text if it exists
+  if (qualityText) {
+    doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
+    doc.setFontSize(bodyFontSize);
+    doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
+    doc.text('  ' + qualityText, startX + completionTextWidth + trainingTitleWidth, currentY);
+  }
+  
+  currentY += lineSpacing;
+  
+  // Add topic on the next line if available
+  if (data.topic) {
+    // Add some spacing before topic
+    currentY += 2;
+    
+    // Set italic style for topic
+    doc.setFont(bodyFont, mapFontStyleToSupported('italic'));
+    const topicText = `Topic: ${data.topic}`;
+    const splitTopicText = doc.splitTextToSize(topicText, contentWidth - 40);
+    doc.text(splitTopicText, centerX, currentY, { align: 'center' });
+    currentY += (splitTopicText.length * lineSpacing);
+  }
+  
+  // Add date below the topic
+  currentY += 2; // Add some spacing before date
+  doc.setFont(bodyFont, mapFontStyleToSupported(template?.body_font_style || 'normal'));
+  doc.setFontSize(template?.body_font_size || 10);
+  doc.setTextColor(bodyColor.r, bodyColor.g, bodyColor.b);
+  const dateText = `Date: ${formattedDate}`;
+  doc.text(dateText, centerX, currentY, { align: 'center' });
+  currentY += lineSpacing;
+  
 
-  // Generate QR code for verification - moved to top-left corner to avoid badge
+
+  // Generate QR code for verification - positioned within content area
   try {
     const qrCodeDataUrl = await QRCode.toDataURL(data.verificationUrl, {
       margin: 1,
-      width: 80
+      width: 60
     });
-    doc.addImage(qrCodeDataUrl, 'PNG', 20, 165, 20, 20);
-    doc.setFontSize(8);
-    doc.text('Scan to verify', 30, 190, { align: 'center' });
+    doc.addImage(qrCodeDataUrl, 'PNG', contentMarginLeft + 5, 155, 15, 15);
+    doc.setFontSize(6);
+    doc.text('Scan to verify', contentMarginLeft + 12.5, 175, { align: 'center' });
   } catch (error) {
     console.error('Error generating QR code:', error);
   }
 
-  // Add certificate number in a subtle way - kept at bottom right
-  doc.setFontSize(8);
-  doc.text(`Certificate Number: ${data.certificateNumber}`, 270, 205, { align: 'right' });
+  // Add certificate number in a subtle way - positioned within content area
+  doc.setFontSize(6);
+  doc.text(`Certificate Number: ${data.certificateNumber}`, 297 - contentMarginRight - 5, 210 - contentMarginBottom, { align: 'right' });
 
   // Debug template data
   console.log('Template data:', template);
@@ -347,9 +413,9 @@ export async function generateCertificatePdf(
   const signatureFontSize = template?.signature_font_size || 10;
   const signatureColor = parseColor(template?.signature_color || '#000000');
   
-  // Set signature font and color
+  // Set signature font and color - smaller for compact layout
   doc.setFont(signatureFont, signatureFontStyle);
-  doc.setFontSize(signatureFontSize);
+  doc.setFontSize(template?.signature_font_size || 8); // Smaller signature font
   doc.setTextColor(signatureColor.r, signatureColor.g, signatureColor.b);
   
   // Get signature names and titles from template or data
@@ -372,13 +438,18 @@ export async function generateCertificatePdf(
   
   console.log('Using signature names:', { leftName, leftTitle, rightName, rightTitle });
   
-  // Left signature - moved slightly right (from 75 to 95)
-  doc.text(leftName, 95, 185, { align: 'center' });
-  doc.text(leftTitle, 95, 191, { align: 'center' });
+  // Calculate signature positions within content area
+  const signatureY = 210 - contentMarginBottom - 15; // Position signatures above bottom margin
+  const leftSignatureX = contentMarginLeft + 60;     // Left signature position
+  const rightSignatureX = 297 - contentMarginRight - 60; // Right signature position
   
-  // Right signature - moved slightly left (from 222 to 202)
-  doc.text(rightName, 202, 185, { align: 'center' });
-  doc.text(rightTitle, 202, 191, { align: 'center' });
+  // Left signature - positioned within content area
+  doc.text(leftName, leftSignatureX, signatureY, { align: 'center' });
+  doc.text(leftTitle, leftSignatureX, signatureY + 5, { align: 'center' });
+  
+  // Right signature - positioned within content area
+  doc.text(rightName, rightSignatureX, signatureY, { align: 'center' });
+  doc.text(rightTitle, rightSignatureX, signatureY + 5, { align: 'center' });
 
   // Convert the PDF to an array buffer
   const pdfArrayBuffer = doc.output('arraybuffer');
@@ -439,6 +510,7 @@ export function formatCertificateData({
   session: {
     title: string;
     start_time: string;
+    topic?: string;
   };
   baseUrl: string;
   location?: string;
@@ -460,6 +532,7 @@ export function formatCertificateData({
     issuedDate,
     verificationUrl,
     location,
+    topic: session.topic,
     signatories
   };
 }

@@ -183,13 +183,22 @@ async function fetchLandingData() {
   const supabase = await createClient();
   
   // Fetch all data in parallel
-  const [heroResult, featuresResult, testimonialsResult, statsResult, ctaResult, settingsResult] = await Promise.all([
+  const [
+    heroResult,
+    featuresResult,
+    testimonialsResult,
+    statsResult,
+    ctaResult,
+    settingsResult,
+    logoResult
+  ] = await Promise.all([
     supabase.from('landing_hero').select('*').single(),
     supabase.from('landing_features').select('*').order('order_index', { ascending: true }),
     supabase.from('landing_testimonials').select('*').order('order_index', { ascending: true }),
     supabase.from('landing_stats').select('*').order('order_index', { ascending: true }),
     supabase.from('landing_cta').select('*').single(),
-    supabase.from('landing_settings').select('*').single()
+    supabase.from('landing_settings').select('*').single(),
+    supabase.from('landing_logo').select('*').single()
   ]);
   
   // Transform the data to match our component props
@@ -208,7 +217,7 @@ async function fetchLandingData() {
     primary_button_url: ctaResult.data.button_primary_url || '/auth/sign-up',
     secondary_button_text: ctaResult.data.button_secondary_text,
     secondary_button_url: ctaResult.data.button_secondary_url || '/contact',
-    additional_notes: 'No credit card required • Free trial available • Cancel anytime'
+    additional_notes: null
   } : null;
   
   // Transform testimonials data
@@ -258,23 +267,24 @@ async function fetchLandingData() {
     testimonials: testimonials as TestimonialSectionProps[],
     stats: stats as StatSectionProps[],
     cta: cta as CtaSectionProps,
-    settings: settings as FooterSectionProps
+    settings: settings as FooterSectionProps,
+    logo: logoResult.data
   };
 }
 
 export default async function Home() {
   const data = await fetchLandingData();
-  const { hero, features, testimonials, stats, cta, settings } = data;
+  const { hero, features, testimonials, stats, cta, settings, logo } = data;
   
   return (
     <div className="min-h-screen">
-      <Navbar />
+      <Navbar logo={logo} />
       {settings?.show_hero !== false && hero && <HeroSection data={hero} />}
       {settings?.show_stats !== false && stats && <StatsSection data={stats} />}
       {settings?.show_features !== false && features && <FeaturesSection data={features} />}
       {settings?.show_testimonials !== false && testimonials && <TestimonialsSection data={testimonials} />}
       {settings?.show_cta !== false && cta && <CtaSection data={cta} />}
-      <FooterSection settings={settings} />
+      <FooterSection settings={settings} logo={logo} />
     </div>
   );
 }

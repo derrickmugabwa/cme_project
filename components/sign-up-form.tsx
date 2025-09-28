@@ -23,8 +23,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Image from 'next/image'
+import { Logo } from '@/lib/logo-service'
 
-export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
+  logo: Logo | null;
+}
+
+export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
@@ -198,7 +204,31 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
   return (
     <div className={cn('flex flex-col gap-6 max-w-3xl mx-auto w-full', className)} {...props}>
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden">
+        {/* Green Header Bar with Logo */}
+        <div 
+          className="w-full py-4 px-6 flex items-center justify-center"
+          style={{ backgroundColor: '#008C45' }}
+        >
+          <Link href="/" className="flex items-center">
+            <div className="relative h-8 w-40 md:h-10 md:w-48">
+              {logo ? (
+                <Image
+                  src={logo.url}
+                  alt={logo.alt_text}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              ) : (
+                <div className="h-8 w-40 md:h-10 md:w-48 bg-white/20 animate-pulse rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm md:text-base">METROPOLIS</span>
+                </div>
+              )}
+            </div>
+          </Link>
+        </div>
+        
         <CardHeader>
           <CardTitle className="text-2xl">Sign up</CardTitle>
           <CardDescription>Create a new account</CardDescription>

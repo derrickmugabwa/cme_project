@@ -5,22 +5,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/client";
-import { NavItem } from "@/components/admin/site/navbar/nav-items-manager";
+import { Logo } from '@/lib/logo-service';
 
-interface Logo {
+interface NavItem {
   id: string;
+  label: string;
   url: string;
-  alt_text: string;
+  is_external: boolean;
+  order_index: number;
 }
 
-export const Navbar = () => {
+
+
+interface NavbarProps {
+  logo: Logo | null;
+}
+
+export const Navbar = ({ logo }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [navLinks, setNavLinks] = useState<NavItem[]>([]);
-  const [logo, setLogo] = useState<Logo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch navigation items and logo from the database
+  // Fetch navigation items from the database
   useEffect(() => {
     const fetchNavData = async () => {
       try {
@@ -34,17 +41,8 @@ export const Navbar = () => {
         
         if (navError) throw navError;
         
-        // Fetch logo
-        const { data: logoData, error: logoError } = await supabase
-          .from('landing_logo')
-          .select('*')
-          .single();
-        
-        if (logoError && logoError.code !== 'PGRST116') throw logoError;
-        
         // Update state with fetched data
         if (navItems) setNavLinks(navItems);
-        if (logoData) setLogo(logoData);
       } catch (error) {
         console.error('Error fetching navigation data:', error);
       } finally {
@@ -73,15 +71,18 @@ export const Navbar = () => {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md py-2"
-          : "bg-transparent py-3"
+          ? "backdrop-blur-md shadow-md py-1"
+          : "py-2"
       }`}
+      style={{
+        backgroundColor: isScrolled ? 'rgba(0, 140, 69, 0.95)' : '#008C45'
+      }}
     >
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center -ml-4 md:-ml-6">
-            <div className="relative h-10 w-48 md:h-12 md:w-60">
+            <div className="relative h-9 w-44 md:h-11 md:w-52">
               {logo ? (
                 <Image
                   src={logo.url}
@@ -91,7 +92,7 @@ export const Navbar = () => {
                   priority
                 />
               ) : (
-                <div className="h-12 w-52 md:h-14 md:w-64 bg-gray-200 dark:bg-gray-800 animate-pulse rounded"></div>
+                <div className="h-9 w-44 md:h-11 md:w-52 bg-gray-200 dark:bg-gray-800 animate-pulse rounded"></div>
               )}
             </div>
           </Link>
@@ -113,9 +114,7 @@ export const Navbar = () => {
                   href={link.url}
                   target={link.is_external ? "_blank" : undefined}
                   rel={link.is_external ? "noopener noreferrer" : undefined}
-                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
-                    isScrolled ? "text-gray-700 dark:text-gray-200" : "text-gray-700 dark:text-white"
-                  }`}
+                  className="text-sm font-medium text-white hover:text-green-100 transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -123,17 +122,13 @@ export const Navbar = () => {
             )}
           </nav>
 
-          {/* Authentication Buttons - Desktop */}
+          {/* Auth buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Link href="/auth/login">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isScrolled
-                    ? "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    : "text-gray-700 dark:text-white hover:bg-white/10"
-                }`}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
               >
                 Sign In
               </motion.button>
@@ -142,7 +137,7 @@ export const Navbar = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                className="px-4 py-2 rounded-lg bg-white text-green-700 text-sm font-medium shadow-md hover:shadow-lg hover:bg-green-50 transition-all"
               >
                 Sign Up
               </motion.button>
@@ -151,7 +146,7 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-gray-700 dark:text-white"
+            className="md:hidden text-white"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? (

@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
     const sessionData = await request.json();
     
     // Validate session data
-    if (!sessionData.title || !sessionData.start_time || !sessionData.end_time) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!sessionData.title || !sessionData.topic || !sessionData.start_time || !sessionData.end_time) {
+      return NextResponse.json({ error: 'Missing required fields: title, topic, start_time, and end_time are required' }, { status: 400 });
     }
     
     // Create session in database
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       .from('sessions')
       .insert({
         title: sessionData.title,
+        topic: sessionData.topic,
         description: sessionData.description,
         start_time: sessionData.start_time,
         end_time: sessionData.end_time,

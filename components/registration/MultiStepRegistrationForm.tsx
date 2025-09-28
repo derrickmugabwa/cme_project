@@ -4,6 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RegistrationProvider, useRegistration } from '@/contexts/RegistrationContext';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2ProfessionalInfo } from './Step2ProfessionalInfo';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Logo } from '@/lib/logo-service';
 
 // Step indicator component
 function StepIndicator({ currentStep }: { currentStep: number }) {
@@ -38,10 +41,38 @@ function FormContent() {
 }
 
 // Main multi-step registration form component
-export function MultiStepRegistrationForm() {
+interface MultiStepRegistrationFormProps {
+  logo: Logo | null;
+}
+
+export function MultiStepRegistrationForm({ logo }: MultiStepRegistrationFormProps) {
   return (
     <div className="max-w-3xl mx-auto w-full">
-      <Card className="w-full">
+      <Card className="w-full overflow-hidden">
+        {/* Green Header Bar with Logo */}
+        <div 
+          className="w-full py-4 px-6 flex items-center justify-center"
+          style={{ backgroundColor: '#008C45' }}
+        >
+          <Link href="/" className="flex items-center">
+            <div className="relative h-8 w-40 md:h-10 md:w-48">
+              {logo ? (
+                <Image
+                  src={logo.url}
+                  alt={logo.alt_text}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              ) : (
+                <div className="h-8 w-40 md:h-10 md:w-48 bg-white/20 animate-pulse rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm md:text-base">METROPOLIS</span>
+                </div>
+              )}
+            </div>
+          </Link>
+        </div>
+        
         <CardContent className="p-6">
           <RegistrationProvider>
             <FormContent />

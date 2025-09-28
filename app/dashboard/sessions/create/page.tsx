@@ -31,6 +31,7 @@ export default function CreateSessionPage() {
   
   // Form state
   const [title, setTitle] = useState('');
+  const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [startDateTime, setStartDateTime] = useState<Date | null>(null);
   const [endDateTime, setEndDateTime] = useState<Date | null>(null);
@@ -120,11 +121,11 @@ export default function CreateSessionPage() {
       setLoading(true);
       
       // Validate form data
-      if (!title || !startDateTime || !endDateTime) {
+      if (!title || !topic || !startDateTime || !endDateTime) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Please fill in all required fields"
+          description: "Please fill in all required fields (title, topic, start time, and end time)"
         });
         return;
       }
@@ -189,6 +190,7 @@ export default function CreateSessionPage() {
       // Prepare base session data
       const baseSessionData = {
         title,
+        topic,
         description,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
@@ -393,6 +395,18 @@ export default function CreateSessionPage() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Webinar Title"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="topic">Topic *</Label>
+                    <Input
+                      id="topic"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      placeholder=""
                       required
                       className="mt-1"
                     />

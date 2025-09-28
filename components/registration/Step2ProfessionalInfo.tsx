@@ -244,7 +244,7 @@ export function Step2ProfessionalInfo() {
           <Button type="button" variant="outline" onClick={goToPreviousStep}>
             Back
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white disabled:bg-green-400">
             {isSubmitting ? 'Creating account...' : 'Complete Registration'}
           </Button>
         </div>

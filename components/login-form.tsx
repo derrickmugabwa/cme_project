@@ -3,21 +3,21 @@
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/client'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import Image from 'next/image'
+import { Logo } from '@/lib/logo-service'
 
-export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
+  logo: Logo | null;
+}
+
+export function LoginForm({ logo, className, ...props }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +87,31 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
+      <Card className="overflow-hidden">
+        {/* Green Header Bar with Logo */}
+        <div 
+          className="w-full py-4 px-6 flex items-center justify-center"
+          style={{ backgroundColor: '#008C45' }}
+        >
+          <Link href="/" className="flex items-center">
+            <div className="relative h-8 w-40 md:h-10 md:w-48">
+              {logo ? (
+                <Image
+                  src={logo.url}
+                  alt={logo.alt_text}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              ) : (
+                <div className="h-8 w-40 md:h-10 md:w-48 bg-white/20 animate-pulse rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm md:text-base">METROPOLIS</span>
+                </div>
+              )}
+            </div>
+          </Link>
+        </div>
+        
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>Enter your email below to login to your account</CardDescription>
@@ -125,7 +149,11 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-green-600 hover:bg-green-700 text-white" 
+                disabled={isLoading}
+              >
                 {isLoading ? 'Logging in...' : 'Login'}
               </Button>
             </div>

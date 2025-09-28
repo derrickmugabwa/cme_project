@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         profiles:user_id(id, full_name, email),
-        sessions:session_id(id, title, start_time, end_time)
+        sessions:session_id(id, title, start_time, end_time, topic)
       `)
       .eq('id', certificateId)
       .single();
@@ -95,7 +95,8 @@ export async function GET(request: NextRequest) {
       },
       session: {
         title: certificate.sessions.title,
-        start_time: certificate.sessions.start_time
+        start_time: certificate.sessions.start_time,
+        topic: certificate.sessions.topic
       },
       baseUrl,
       location: sessionLocation?.location,

@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/server';
 import teamsMeetingService from '@/lib/teamsMeetingService';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // GET /api/sessions/[id] - Get a single session
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -38,6 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -138,6 +135,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -173,17 +171,57 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       }
     }
     
-    // Delete session from database
-    const { error } = await supabase
-      .from('sessions')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      throw error;
+    try {
+      // Check if session exists and user has permission to archive
+      const { data: sessionExists, error: sessionError } = await supabase
+        .from('sessions')
+        .select('id, title, created_by, archived_at')
+        .eq('id', id)
+        .single();
+
+      if (sessionError || !sessionExists) {
+        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      }
+
+      if (sessionExists.archived_at) {
+        return NextResponse.json({ error: 'Session is already archived' }, { status: 400 });
+      }
+
+      // Check permissions: admin, faculty, or session creator
+      if (user.role !== 'admin' && user.role !== 'faculty' && sessionExists.created_by !== user.id) {
+        return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+      }
+
+      // Archive the session instead of deleting it
+      // This preserves all related data (attendance, enrollments, unit requirements, etc.)
+      const { data: archivedData, error: archiveError } = await supabase
+        .from('sessions')
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by: user.id,
+          archive_reason: 'Archived via admin interface',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select();
+
+      if (archiveError) {
+        console.error('Error archiving session:', archiveError);
+        throw new Error(`Failed to archive session: ${archiveError.message}`);
+      }
+
+      console.log('Session archived successfully:', archivedData);
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: `Session "${sessionExists.title}" has been archived successfully. All related data (enrollments, attendance, unit requirements) has been preserved.`,
+        archived: true,
+        archivedData: archivedData?.[0]
+      });
+    } catch (error: any) {
+      console.error('Error deleting session:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    
-    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting session:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

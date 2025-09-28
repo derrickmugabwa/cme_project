@@ -4,25 +4,22 @@ import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { Logo } from '@/lib/logo-service';
 
 interface LandingSettings {
   id: string;
-  site_name: string;
-  site_description: string;
+  company_name: string;
+  company_description: string;
   contact_email: string;
-  contact_phone: string | null;
-  address: string | null;
-  social_links: {
-    twitter?: string;
-    facebook?: string;
-    linkedin?: string;
-    instagram?: string;
-  };
-  show_hero: boolean;
-  show_features: boolean;
-  show_testimonials: boolean;
-  show_stats: boolean;
-  show_cta: boolean;
+  contact_phone: string;
+  address: string;
+  social_facebook?: string;
+  social_twitter?: string;
+  social_linkedin?: string;
+  social_instagram?: string;
+  footer_text: string;
+  created_at: string;
+  updated_at: string;
   seo_title: string | null;
   seo_description: string | null;
   seo_keywords: string[] | null;
@@ -30,9 +27,11 @@ interface LandingSettings {
 
 interface FooterSectionProps {
   settings: LandingSettings;
+  logo: Logo | null;
 }
 
-export const FooterSection = ({ settings }: FooterSectionProps) => {
+export const FooterSection = ({ settings, logo }: FooterSectionProps) => {
+
   const footerLinks = [
     {
       title: "Platform",
@@ -112,13 +111,22 @@ export const FooterSection = ({ settings }: FooterSectionProps) => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-16">
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">
-              <div className="h-10 w-40 relative">
-                <Image
-                  src="/logo.svg"
-                  alt={`${settings.site_name} Logo`}
-                  fill
-                  className="object-contain"
-                />
+              <div 
+                className="h-12 w-48 relative p-2 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#008C45' }}
+              >
+                {logo ? (
+                  <Image
+                    src={logo.url}
+                    alt={logo.alt_text}
+                    fill
+                    className="object-contain p-1"
+                  />
+                ) : (
+                  <div className="h-8 w-40 bg-white/20 animate-pulse rounded flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">METROPOLIS</span>
+                  </div>
+                )}
               </div>
             </Link>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-xs">

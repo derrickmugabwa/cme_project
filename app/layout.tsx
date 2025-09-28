@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { LogoProvider } from "@/contexts/logo-context";
+import { fetchLogo } from "@/lib/logo-service";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,19 +21,23 @@ export const metadata: Metadata = {
   description: "Continuing Medical Education Platform for Healthcare Professionals",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const logo = await fetchLogo();
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Toaster />
-        <ToastProvider />
+        <LogoProvider logo={logo}>
+          {children}
+          <Toaster />
+          <ToastProvider />
+        </LogoProvider>
       </body>
     </html>
   );

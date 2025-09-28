@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
+import { fetchLogo } from '@/lib/logo-service'
 
 export default async function DashboardLayout({
   children,
@@ -36,11 +37,15 @@ export default async function DashboardLayout({
   // Get first letter of name for avatar
   const avatarInitial = (profile.full_name || profile.username || 'U').charAt(0).toUpperCase()
   
+  // Fetch logo for sidebar
+  const logo = await fetchLogo()
+  
   return (
     <DashboardShell 
       profile={profile}
       formattedRole={formattedRole}
       avatarInitial={avatarInitial}
+      logo={logo}
     >
       {children}
     </DashboardShell>

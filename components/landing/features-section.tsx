@@ -90,7 +90,7 @@ export const FeaturesSection = ({ data }: FeaturesSectionProps) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-bold mb-4"
+            className="text-3xl md:text-4xl font-bold mb-4 text-green-600"
           >
             Key Features
           </motion.h2>
