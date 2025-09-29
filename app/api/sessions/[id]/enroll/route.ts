@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/server';
 import { NextResponse } from 'next/server';
 import { sendEnrollmentConfirmation, WebinarDetails } from '@/services/email';
+import { inngest } from '@/lib/inngest';
 
 // POST /api/sessions/:id/enroll - Enroll in a session (with unit check)
 export async function POST(
@@ -164,6 +165,28 @@ export async function POST(
           error: emailError,
           message: emailError instanceof Error ? emailError.message : 'Unknown error',
           stack: emailError instanceof Error ? emailError.stack : undefined
+        });
+      }
+    }
+
+    // Trigger Inngest event to schedule reminder emails
+    if (enrollment && sessionDetails) {
+      try {
+        await inngest.send({
+          name: "session/user.enrolled",
+          data: {
+            sessionId: sessionId,
+            userId: user.id,
+            enrollmentId: enrollment.id,
+            sessionStartTime: sessionDetails.start_time
+          }
+        });
+        console.log('Reminder scheduling event sent to Inngest');
+      } catch (inngestError) {
+        // Log the error but don't fail the enrollment
+        console.error('Failed to schedule reminder emails:', {
+          error: inngestError,
+          message: inngestError instanceof Error ? inngestError.message : 'Unknown error'
         });
       }
     }
