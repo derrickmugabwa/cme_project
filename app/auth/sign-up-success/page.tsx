@@ -33,7 +33,7 @@ export default function Page() {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: 'spring', stiffness: 100 }
+      transition: { type: 'spring' as const, stiffness: 100 }
     }
   };
   
@@ -41,7 +41,7 @@ export default function Page() {
     hidden: { scale: 0 },
     visible: {
       scale: 1,
-      transition: { type: 'spring', stiffness: 200, delay: 0.2 }
+      transition: { type: 'spring' as const, stiffness: 200, delay: 0.2 }
     }
   };
   

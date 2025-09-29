@@ -26,7 +26,8 @@ export default function SiteManagementPage() {
           'landing_testimonials',
           'landing_stats',
           'landing_cta',
-          'landing_settings'
+          'landing_settings',
+          'footer_settings'
         ];
         
         const updates: {[key: string]: string} = {};
@@ -98,6 +99,13 @@ export default function SiteManagementPage() {
       icon: <FileText className="h-5 w-5" />,
       href: "/dashboard/admin/site/navbar",
       lastUpdate: lastUpdated['landing_settings'] || 'Not updated yet'
+    },
+    {
+      title: "Footer",
+      description: "Footer content and links",
+      icon: <FileText className="h-5 w-5" />,
+      href: "/dashboard/admin/site/footer",
+      lastUpdate: lastUpdated['footer_settings'] || 'Not updated yet'
     }
   ];
 

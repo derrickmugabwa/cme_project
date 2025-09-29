@@ -10,6 +10,7 @@ import {
   Navbar
 } from "@/components/landing";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { fetchFooterData } from "@/lib/footer-service";
 
 // Define component prop interfaces for landing page sections
 interface HeroSectionProps {
@@ -190,7 +191,8 @@ async function fetchLandingData() {
     statsResult,
     ctaResult,
     settingsResult,
-    logoResult
+    logoResult,
+    footerData
   ] = await Promise.all([
     supabase.from('landing_hero').select('*').single(),
     supabase.from('landing_features').select('*').order('order_index', { ascending: true }),
@@ -198,7 +200,8 @@ async function fetchLandingData() {
     supabase.from('landing_stats').select('*').order('order_index', { ascending: true }),
     supabase.from('landing_cta').select('*').single(),
     supabase.from('landing_settings').select('*').single(),
-    supabase.from('landing_logo').select('*').single()
+    supabase.from('landing_logo').select('*').single(),
+    fetchFooterData()
   ]);
   
   // Transform the data to match our component props
@@ -268,13 +271,14 @@ async function fetchLandingData() {
     stats: stats as StatSectionProps[],
     cta: cta as CtaSectionProps,
     settings: settings as FooterSectionProps,
-    logo: logoResult.data
+    logo: logoResult.data,
+    footerData
   };
 }
 
 export default async function Home() {
   const data = await fetchLandingData();
-  const { hero, features, testimonials, stats, cta, settings, logo } = data;
+  const { hero, features, testimonials, stats, cta, settings, logo, footerData } = data;
   
   return (
     <div className="min-h-screen">
@@ -284,7 +288,7 @@ export default async function Home() {
       {settings?.show_features !== false && features && <FeaturesSection data={features} />}
       {settings?.show_testimonials !== false && testimonials && <TestimonialsSection data={testimonials} />}
       {settings?.show_cta !== false && cta && <CtaSection data={cta} />}
-      <FooterSection settings={settings} logo={logo} />
+      <FooterSection settings={settings} logo={logo} footerData={footerData} />
     </div>
   );
 }

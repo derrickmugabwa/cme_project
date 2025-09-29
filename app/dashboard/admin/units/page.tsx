@@ -3,6 +3,8 @@ import AdminUnitsClient from './client';
 import { createClient } from '@/lib/server';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Units Management',
   description: 'Manage user units and session requirements',

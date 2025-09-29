@@ -6,6 +6,8 @@ import { ManualReminderTrigger } from './components/ManualReminderTrigger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+export const dynamic = 'force-dynamic';
+
 export default async function RemindersAdminPage() {
   const supabase = await createClient();
   

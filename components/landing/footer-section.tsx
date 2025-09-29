@@ -5,71 +5,59 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Logo } from '@/lib/logo-service';
+import { FooterData, groupLinksBySection } from '@/lib/footer-service';
 
 interface LandingSettings {
   id: string;
-  company_name: string;
-  company_description: string;
-  contact_email: string;
-  contact_phone: string;
-  address: string;
-  social_facebook?: string;
-  social_twitter?: string;
-  social_linkedin?: string;
-  social_instagram?: string;
-  footer_text: string;
-  created_at: string;
-  updated_at: string;
-  seo_title: string | null;
-  seo_description: string | null;
-  seo_keywords: string[] | null;
+  site_title?: string;
+  site_name?: string;
+  company_name?: string;
+  site_description?: string;
+  company_description?: string;
+  meta_description?: string;
+  contact_email?: string;
+  contact_phone?: string | null;
+  address?: string | null;
+  social_facebook?: string | null;
+  social_twitter?: string | null;
+  social_linkedin?: string | null;
+  social_instagram?: string | null;
+  social_links?: any;
+  footer_text?: string;
+  created_at?: string;
+  updated_at?: string;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_keywords?: string[] | null;
+  show_hero?: boolean;
+  show_features?: boolean;
+  show_testimonials?: boolean;
+  show_stats?: boolean;
+  show_cta?: boolean;
 }
 
 interface FooterSectionProps {
   settings: LandingSettings;
   logo: Logo | null;
+  footerData: FooterData;
 }
 
-export const FooterSection = ({ settings, logo }: FooterSectionProps) => {
+export const FooterSection = ({ settings, logo, footerData }: FooterSectionProps) => {
 
-  const footerLinks = [
-    {
-      title: "Platform",
-      links: [
-        { name: "Features", href: "#features" },
-        { name: "Pricing", href: "/pricing" },
-        { name: "FAQ", href: "/faq" },
-        { name: "Testimonials", href: "#testimonials" },
-      ],
-    },
-    {
-      title: "Resources",
-      links: [
-        { name: "Documentation", href: "/docs" },
-        { name: "Webinars", href: "/webinars" },
-        { name: "Blog", href: "/blog" },
-        { name: "Support", href: "/support" },
-      ],
-    },
-    {
-      title: "Company",
-      links: [
-        { name: "About Us", href: "/about" },
-        { name: "Careers", href: "/careers" },
-        { name: "Contact", href: "/contact" },
-        { name: "Partners", href: "/partners" },
-      ],
-    },
-    {
-      title: "Legal",
-      links: [
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
-        { name: "Cookie Policy", href: "/cookies" },
-        { name: "GDPR", href: "/gdpr" },
-      ],
-    },
-  ];
+  // Use database-driven footer content
+  const footerLinks = groupLinksBySection(footerData.sections, footerData.links);
+  
+  // Calculate grid columns based on number of enabled sections
+  const enabledSectionsCount = footerLinks.length;
+  const totalColumns = enabledSectionsCount + 2; // +2 for the logo/company info section
+  
+  // Determine grid class based on total columns
+  const getGridClass = () => {
+    if (totalColumns <= 3) return "grid-cols-2 md:grid-cols-3";
+    if (totalColumns <= 4) return "grid-cols-2 md:grid-cols-4";
+    if (totalColumns <= 5) return "grid-cols-2 md:grid-cols-5";
+    return "grid-cols-2 md:grid-cols-6";
+  };
 
   // Social media icons
   const socialIcons = {
@@ -96,19 +84,17 @@ export const FooterSection = ({ settings, logo }: FooterSectionProps) => {
   };
   
   // Generate social links from settings
-  const socialLinks = Object.entries(settings.social_links || {}).map(([key, url]) => {
-    if (!url) return null;
-    return {
-      name: key.charAt(0).toUpperCase() + key.slice(1),
-      href: url,
-      icon: socialIcons[key as keyof typeof socialIcons],
-    };
-  }).filter(Boolean) as { name: string; href: string; icon: React.ReactNode }[];
+  const socialLinks = [
+    { name: 'Facebook', href: settings.social_facebook, icon: socialIcons.facebook },
+    { name: 'Twitter', href: settings.social_twitter, icon: socialIcons.twitter },
+    { name: 'LinkedIn', href: settings.social_linkedin, icon: socialIcons.linkedin },
+    { name: 'Instagram', href: settings.social_instagram, icon: socialIcons.instagram },
+  ].filter(link => link.href) as { name: string; href: string; icon: React.ReactNode }[];
 
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 pt-16 pb-8">
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-16">
+        <div className={`grid ${getGridClass()} gap-8 mb-16`}>
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">
               <div 
@@ -130,24 +116,26 @@ export const FooterSection = ({ settings, logo }: FooterSectionProps) => {
               </div>
             </Link>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-xs">
-              {settings.site_description}
+              {footerData.settings?.footer_text || settings.site_description || settings.company_description || settings.meta_description}
             </p>
-            <div className="flex space-x-4">
-              {socialLinks.map((item) => (
-                <motion.a
-                  key={item.name}
-                  href={item.href}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="sr-only">{item.name}</span>
-                  {item.icon}
-                </motion.a>
-              ))}
-            </div>
+            {footerData.settings?.show_social_links && socialLinks.length > 0 && (
+              <div className="flex space-x-4">
+                {socialLinks.map((item) => (
+                  <motion.a
+                    key={item.name}
+                    href={item.href}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span className="sr-only">{item.name}</span>
+                    {item.icon}
+                  </motion.a>
+                ))}
+              </div>
+            )}
           </div>
           
           {footerLinks.map((group) => (
@@ -174,36 +162,38 @@ export const FooterSection = ({ settings, logo }: FooterSectionProps) => {
         <div className="border-t border-gray-200 dark:border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              © {new Date().getFullYear()} {settings.site_name}. All rights reserved.
+              © {new Date().getFullYear()} {settings.site_title || settings.site_name || settings.company_name || 'Your Company'}. {footerData.settings?.copyright_text || 'All rights reserved.'}
             </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link 
-                href="/privacy" 
-                className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <Link 
-                href="/terms" 
-                className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
-              >
-                Terms of Service
-              </Link>
-              <Link 
-                href="/cookies" 
-                className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
-              >
-                Cookie Policy
-              </Link>
-              {settings.contact_email && (
+            {footerData.settings?.show_legal_links && (
+              <div className="flex space-x-6 mt-4 md:mt-0">
                 <Link 
-                  href={`mailto:${settings.contact_email}`} 
+                  href="/privacy" 
                   className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
                 >
-                  Contact
+                  Privacy Policy
                 </Link>
-              )}
-            </div>
+                <Link 
+                  href="/terms" 
+                  className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
+                >
+                  Terms of Service
+                </Link>
+                <Link 
+                  href="/cookies" 
+                  className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
+                >
+                  Cookie Policy
+                </Link>
+                {settings.contact_email && (
+                  <Link 
+                    href={`mailto:${settings.contact_email}`} 
+                    className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
+                  >
+                    Contact
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

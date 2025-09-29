@@ -50,6 +50,7 @@ export default function SiteManagementLayout({
     { href: "/dashboard/admin/site/stats", label: "Statistics" },
     { href: "/dashboard/admin/site/cta", label: "Call to Action" },
     { href: "/dashboard/admin/site/navbar", label: "Navigation" },
+    { href: "/dashboard/admin/site/footer", label: "Footer" },
   ];
 
   return (

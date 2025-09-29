@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const pdfBytes = await generateCertificatePdf(sampleData);
 
     // Return the PDF as a downloadable file
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="sample-certificate.pdf"'
