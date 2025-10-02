@@ -144,7 +144,7 @@ export default function SiteManagementPage() {
             <CardFooter>
               <Button 
                 variant="default" 
-                className="w-full"
+                className="w-full bg-[#008C45] hover:bg-[#006633] text-white"
                 onClick={() => router.push(section.href)}
               >
                 Edit Section

@@ -113,14 +113,14 @@ function WebinarSessionsList({ userId }: { userId: string }) {
               {enrollments[session.id] ? (
                 <Button 
                   onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="bg-[#008C45] hover:bg-[#006633] text-white"
                 >
                   View Details
                 </Button>
               ) : (
                 <Button 
                   onClick={() => window.location.href = `/dashboard/sessions/${session.id}`}
-                  className="bg-green-500 hover:bg-green-600 text-white"
+                  className="bg-[#008C45] hover:bg-[#006633] text-white"
                 >
                   Enroll
                 </Button>
@@ -280,7 +280,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFE2EC] to-[#FFF0F5] dark:from-pink-950 dark:to-pink-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <Video className="h-12 w-12 text-pink-500" />
+            <Video className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">My Enrollment</CardDescription>
@@ -293,10 +293,10 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-pink-300 text-pink-700 dark:text-pink-300"
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300"
               onClick={() => window.location.href = '/dashboard/sessions'}
             >
-              <Video className="mr-2 h-4 w-4 text-pink-500" />
+              <Video className="mr-2 h-4 w-4 text-[#008C45]" />
               Browse Webinars
             </Button>
           </CardFooter>
@@ -304,7 +304,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#E3F2FD] to-[#BBDEFB] dark:from-blue-950 dark:to-blue-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <Calendar className="h-12 w-12 text-blue-500" />
+            <Calendar className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">Attendance Rate</CardDescription>
@@ -317,10 +317,10 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300"
+              className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300"
               onClick={() => window.location.href = '/dashboard/my-attendance'}
             >
-              <Calendar className="mr-2 h-4 w-4 text-blue-500" />
+              <Calendar className="mr-2 h-4 w-4 text-[#008C45]" />
               View Schedule
             </Button>
           </CardFooter>
@@ -328,7 +328,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] dark:from-green-950 dark:to-green-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <Award className="h-12 w-12 text-green-500" />
+            <Award className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">My Certificates</CardDescription>
@@ -362,7 +362,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
               <CardTitle>Available Webinar Sessions</CardTitle>
               <CardDescription>Upcoming webinar sessions you can enroll in</CardDescription>
             </div>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+            <Badge variant="outline" className="bg-[#E8F5E9] text-[#008C45] border-[#008C45]/30 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
               <Video className="h-3 w-3 mr-1" />
               Webinars
             </Badge>
@@ -381,7 +381,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
               <CardTitle>Your Units</CardTitle>
               <CardDescription>Units available for webinar enrollments</CardDescription>
             </div>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
+            <Badge variant="outline" className="bg-[#E8F5E9] text-[#008C45] border-[#008C45]/30 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
               <BarChart2 className="h-3 w-3 mr-1" />
               Credits
             </Badge>
@@ -407,7 +407,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
                       cy="50"
                     />
                     <circle
-                      className="text-purple-500 stroke-current"
+                      className="text-[#008C45] stroke-current"
                       strokeWidth="10"
                       strokeLinecap="round"
                       fill="transparent"
@@ -427,7 +427,7 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
                 </p>
               </div>
               <Button 
-                className="w-full"
+                className="w-full bg-[#008C45] hover:bg-[#006633] text-white"
                 onClick={() => window.location.href = '/dashboard/units'}
               >
                 Manage Units

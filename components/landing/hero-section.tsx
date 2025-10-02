@@ -21,34 +21,15 @@ interface HeroSectionProps {
 export const HeroSection = ({ data }: HeroSectionProps) => {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
-      {/* Modern multi-stop gradient background */}
+      {/* Modern multi-stop gradient background - Static for better performance */}
       <div className="absolute inset-0 bg-gradient-to-br from-mint-50 via-emerald-100 to-teal-200" />
       <div className="absolute inset-0 bg-gradient-to-tr from-teal-100/80 via-mint-200/60 to-emerald-50/90" />
       <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-mint-100/40 to-teal-300/30" />
       
-      {/* Noise texture overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.015] mix-blend-multiply"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        }}
-      />
-      
-      {/* Wave patterns */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Primary wave */}
-        <motion.div
-          className="absolute -top-32 -right-64 w-[800px] h-[600px] opacity-20"
-          animate={{ 
-            rotate: [0, 360],
-            scale: [1, 1.1, 1]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 20,
-            ease: "linear" 
-          }}
-        >
+      {/* Simplified static decorative elements - Desktop only */}
+      <div className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none">
+        {/* Static wave shapes - no animation */}
+        <div className="absolute -top-32 -right-64 w-[800px] h-[600px] opacity-10">
           <svg viewBox="0 0 800 600" className="w-full h-full">
             <defs>
               <linearGradient id="waveGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -62,21 +43,9 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
               fill="url(#waveGradient1)"
             />
           </svg>
-        </motion.div>
+        </div>
         
-        {/* Secondary wave */}
-        <motion.div
-          className="absolute -bottom-32 -left-64 w-[700px] h-[500px] opacity-15"
-          animate={{ 
-            rotate: [360, 0],
-            scale: [1.1, 1, 1.1]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 25,
-            ease: "linear" 
-          }}
-        >
+        <div className="absolute -bottom-32 -left-64 w-[700px] h-[500px] opacity-8">
           <svg viewBox="0 0 700 500" className="w-full h-full">
             <defs>
               <linearGradient id="waveGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -90,84 +59,11 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
               fill="url(#waveGradient2)"
             />
           </svg>
-        </motion.div>
+        </div>
         
-        {/* Tertiary decorative wave */}
-        <motion.div
-          className="absolute top-1/3 right-1/4 w-[400px] h-[300px] opacity-10"
-          animate={{ 
-            x: [0, 20, 0],
-            y: [0, -15, 0]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 15,
-            ease: "easeInOut" 
-          }}
-        >
-          <svg viewBox="0 0 400 300" className="w-full h-full">
-            <defs>
-              <linearGradient id="waveGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#059669" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#0891b2" stopOpacity="0.3" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0,150 Q100,100 200,150 T400,150 L400,300 L0,300 Z"
-              fill="url(#waveGradient3)"
-            />
-          </svg>
-        </motion.div>
-      </div>
-      
-      {/* Abstract geometric shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating geometric elements */}
-        <motion.div 
-          className="absolute top-20 left-1/4 w-24 h-24 opacity-10"
-          animate={{ 
-            rotate: [0, 180, 360],
-            scale: [1, 1.2, 1]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 12,
-            ease: "easeInOut" 
-          }}
-        >
-          <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl transform rotate-45" />
-        </motion.div>
-        
-        <motion.div 
-          className="absolute bottom-1/4 right-1/3 w-16 h-16 opacity-8"
-          animate={{ 
-            y: [0, -30, 0],
-            rotate: [0, -90, 0]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 8,
-            ease: "easeInOut" 
-          }}
-        >
-          <div className="w-full h-full bg-gradient-to-tr from-teal-400 to-cyan-500 rounded-full" />
-        </motion.div>
-        
-        <motion.div 
-          className="absolute top-1/2 left-1/5 w-20 h-20 opacity-6"
-          animate={{ 
-            x: [0, 25, 0],
-            scale: [1, 1.3, 1]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 10,
-            ease: "easeInOut" 
-          }}
-        >
-          <div className="w-full h-full bg-gradient-to-bl from-mint-400 to-emerald-500 transform rotate-12" 
-               style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
-        </motion.div>
+        {/* Simple static geometric shapes */}
+        <div className="absolute top-20 left-1/4 w-24 h-24 opacity-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl transform rotate-45" />
+        <div className="absolute bottom-1/4 right-1/3 w-16 h-16 opacity-6 bg-gradient-to-tr from-teal-400 to-cyan-500 rounded-full" />
       </div>
 
       <div className="container relative mx-auto px-6 z-10">

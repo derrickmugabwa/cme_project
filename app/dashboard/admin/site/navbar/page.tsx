@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/client";
 import { LogoManager } from "@/components/admin/site/navbar/logo-manager";
+import { FaviconManager } from "@/components/admin/site/navbar/favicon-manager";
 import { NavItemsManager, NavItem } from "@/components/admin/site/navbar/nav-items-manager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ interface LogoData {
 export default function NavbarManagementPage() {
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [logo, setLogo] = useState<LogoData | undefined>(undefined);
+  const [favicon, setFavicon] = useState<LogoData | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -49,8 +51,19 @@ export default function NavbarManagementPage() {
           throw new Error(`Failed to fetch logo: ${logoError.message}`);
         }
         
+        // Fetch favicon data
+        const { data: faviconData, error: faviconError } = await supabase
+          .from('site_favicon')
+          .select('*')
+          .single();
+          
+        if (faviconError && faviconError.code !== 'PGRST116') {
+          throw new Error(`Failed to fetch favicon: ${faviconError.message}`);
+        }
+        
         setNavItems(navData || []);
         setLogo(logoData || undefined);
+        setFavicon(faviconData || undefined);
       } catch (err) {
         console.error(err);
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -183,9 +196,10 @@ export default function NavbarManagementPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="nav-items" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="nav-items">Navigation Items</TabsTrigger>
               <TabsTrigger value="logo">Logo</TabsTrigger>
+              <TabsTrigger value="favicon">Favicon</TabsTrigger>
             </TabsList>
             
             <TabsContent value="nav-items" className="space-y-4">
@@ -199,6 +213,12 @@ export default function NavbarManagementPage() {
               <LogoManager 
                 initialLogo={logo} 
                 onSave={handleSaveLogo} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="favicon" className="space-y-4">
+              <FaviconManager 
+                initialFavicon={favicon} 
               />
             </TabsContent>
           </Tabs>

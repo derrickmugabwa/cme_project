@@ -12,7 +12,7 @@ const Card = ({ className, ...props }: React.ComponentProps<typeof BaseCard>) =>
 
 // Custom themed Button variants
 const PrimaryButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
-  <Button className={`bg-blue-600 hover:bg-blue-700 text-white rounded-xl ${className || ''}`} {...props} />
+  <Button className={`bg-[#008C45] hover:bg-[#006633] text-white rounded-xl ${className || ''}`} {...props} />
 )
 
 const SecondaryButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
@@ -20,7 +20,7 @@ const SecondaryButton = ({ className, ...props }: React.ComponentProps<typeof Bu
 )
 
 const SuccessButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
-  <Button className={`bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ${className || ''}`} {...props} />
+  <Button className={`bg-[#008C45] hover:bg-[#006633] text-white rounded-xl ${className || ''}`} {...props} />
 )
 import { Input as BaseInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -274,9 +274,6 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Add Educational Content</h1>
         <div className="flex space-x-3">
-          <SecondaryButton type="button" onClick={() => router.push('/dashboard/content')}>
-            Discard
-          </SecondaryButton>
           <SuccessButton type="button" onClick={handleSave} disabled={isUploading}>
             {isUploading ? 'Saving...' : 'Save'}
           </SuccessButton>

@@ -54,7 +54,8 @@ export default function TransactionList() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -127,8 +128,9 @@ export default function TransactionList() {
       
       setTransactions(formattedData);
       
-      // Calculate total pages
-      if (count) {
+      // Calculate total pages and count
+      if (count !== null) {
+        setTotalCount(count);
         setTotalPages(Math.ceil(count / pageSize));
       }
     } catch (error) {
@@ -306,7 +308,7 @@ export default function TransactionList() {
             </Select>
           </div>
           
-          <Button onClick={exportToCsv} className="flex items-center gap-2">
+          <Button onClick={exportToCsv} className="flex items-center gap-2 bg-[#008C45] hover:bg-[#006633] text-white">
             <DownloadIcon className="h-4 w-4" />
             Export CSV
           </Button>
@@ -361,29 +363,91 @@ export default function TransactionList() {
           </Table>
         </div>
         
+        {/* Results summary and page size selector */}
+        {transactions.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-2">
+            <div className="text-sm text-gray-600">
+              Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount} transactions
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Show:</span>
+              <Select value={pageSize.toString()} onValueChange={(value) => { setPageSize(parseInt(value)); setPage(1); }}>
+                <SelectTrigger className="w-20 border-[#008C45]/30 focus:ring-[#008C45]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page > 1 ? page - 1 : 1)}
-              disabled={page === 1}
-            >
-              <ChevronLeftIcon className="h-4 w-4" />
-              Previous
-            </Button>
-            <div className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-4">
+            <div className="flex items-center justify-center sm:justify-start space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="flex items-center space-x-1 border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Previous</span>
+              </Button>
+              
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(pageNum => {
+                    return pageNum === 1 || 
+                           pageNum === totalPages || 
+                           Math.abs(pageNum - page) <= 1;
+                  })
+                  .map((pageNum, index, array) => {
+                    const showEllipsis = index > 0 && pageNum - array[index - 1] > 1;
+                    
+                    return (
+                      <div key={pageNum} className="flex items-center">
+                        {showEllipsis && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        <Button
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPage(pageNum)}
+                          className={`w-8 h-8 p-0 ${
+                            page === pageNum 
+                              ? 'bg-[#008C45] hover:bg-[#006633] text-white' 
+                              : 'border-[#008C45]/30 text-[#008C45] hover:bg-green-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    );
+                  })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                className="flex items-center space-x-1 border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="text-sm text-gray-600 text-center sm:text-right">
               Page {page} of {totalPages}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-              disabled={page === totalPages}
-            >
-              Next
-              <ChevronRightIcon className="h-4 w-4" />
-            </Button>
           </div>
         )}
       </CardContent>

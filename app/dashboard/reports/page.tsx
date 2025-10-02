@@ -114,7 +114,7 @@ export default function ReportsPage() {
     <div className="container mx-auto py-10 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#008C45] to-[#006633] bg-clip-text text-transparent">
             Reports Dashboard
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">
@@ -136,7 +136,7 @@ export default function ReportsPage() {
             placeholder="Search reports..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-background border-0 shadow-md focus-visible:ring-1 focus-visible:ring-primary/30"
+            className="pl-10 bg-background border-0 shadow-md focus-visible:ring-1 focus-visible:ring-[#008C45]/30"
           />
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function ReportsPage() {
             </div>
             <CardHeader className="pt-8 pb-4">
               <div className="flex items-center space-x-3">
-                <div className="bg-primary/10 p-3 rounded-xl text-primary shadow-sm group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                <div className="bg-[#008C45]/10 p-3 rounded-xl text-[#008C45] shadow-sm group-hover:bg-[#008C45] group-hover:text-white transition-colors duration-300">
                   {report.icon}
                 </div>
                 <CardTitle className="text-xl font-bold">{report.name}</CardTitle>
@@ -165,7 +165,7 @@ export default function ReportsPage() {
               <Button 
                 variant="default" 
                 size="sm" 
-                className="w-full mt-2 shadow-sm group-hover:shadow-md transition-all duration-300"
+                className="w-full mt-2 shadow-sm group-hover:shadow-md transition-all duration-300 bg-[#008C45] hover:bg-[#006633] text-white"
                 onClick={() => handleOpenDialog(report)}
               >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -190,7 +190,7 @@ export default function ReportsPage() {
         <DialogContent className="sm:max-w-md md:max-w-lg border-0 shadow-lg">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-3 rounded-xl text-primary">
+              <div className="bg-[#008C45]/10 p-3 rounded-xl text-[#008C45]">
                 {selectedReport?.icon}
               </div>
               <div>
@@ -219,7 +219,7 @@ export default function ReportsPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-[#008C45]/20 focus:border-[#008C45] transition-all duration-200"
                     />
                   </div>
                 </div>
@@ -234,7 +234,7 @@ export default function ReportsPage() {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                      className="w-full shadow-sm border rounded-lg bg-background pl-4 pr-10 py-2 focus:ring-2 focus:ring-[#008C45]/20 focus:border-[#008C45] transition-all duration-200"
                     />
                   </div>
                 </div>
@@ -254,7 +254,7 @@ export default function ReportsPage() {
             <Button 
               onClick={generateReport}
               disabled={isGenerating}
-              className="w-full sm:w-auto shadow-sm"
+              className="w-full sm:w-auto shadow-sm bg-[#008C45] hover:bg-[#006633] text-white"
             >
               {isGenerating ? (
                 <>

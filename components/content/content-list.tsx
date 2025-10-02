@@ -220,7 +220,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
           </div>
           
           {(userRole === 'faculty' || userRole === 'admin') && (
-            <Button asChild>
+            <Button asChild className="bg-[#008C45] hover:bg-[#006633] text-white">
               <a href="/dashboard/content/upload">Upload New Content</a>
             </Button>
           )}
@@ -324,7 +324,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleDownload(item)}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Download

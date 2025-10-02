@@ -5,17 +5,45 @@
 This project uses [Resend](https://resend.com) to send transactional emails to users. Currently, emails are sent for:
 
 1. Webinar enrollment confirmations
+2. Session reminder emails (automated via Inngest)
 
 ## Setup
 
-1. Sign up for a Resend account at https://resend.com
-2. Create an API key in your Resend dashboard
-3. Add the API key to your `.env` file:
-   ```
-   RESEND_API_KEY=your_resend_api_key_here
-   ```
-4. For production, verify your domain in Resend
-5. Update the sender email in `services/email.ts` to use your verified domain
+### 1. Sign up for Resend
+Go to https://resend.com and create an account
+
+### 2. Get Your API Key
+1. Navigate to API Keys in your Resend dashboard
+2. Create a new API key
+3. Copy the key (it will only be shown once)
+
+### 3. Verify Your Domain
+1. In Resend dashboard, go to **Domains**
+2. Click **Add Domain**
+3. Enter your domain (e.g., `yourdomain.com`)
+4. Add the provided DNS records to your domain:
+   - SPF Record (TXT)
+   - DKIM Record (TXT)
+   - MX Record (optional)
+5. Wait for verification (usually within minutes, can take up to 48 hours)
+
+### 4. Configure Environment Variables
+Add these to your `.env.local` file:
+
+```env
+# Resend API Key
+RESEND_API_KEY=re_your_api_key_here
+
+# Email Sender Configuration (use your verified domain)
+EMAIL_FROM_ADDRESS=noreply@yourdomain.com
+EMAIL_FROM_NAME=CME Webinars
+```
+
+**Common sender addresses:**
+- `noreply@yourdomain.com` - Standard for automated emails
+- `notifications@yourdomain.com` - For notification emails
+- `support@yourdomain.com` - If you want users to reply
+- `webinars@yourdomain.com` - Specific to webinar platform
 
 ## Email Templates
 

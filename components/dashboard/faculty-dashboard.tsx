@@ -34,7 +34,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFF5E6] to-[#FFFAF0] dark:from-blue-950 dark:to-blue-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <BookOpen className="h-12 w-12 text-blue-500" />
+            <BookOpen className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">Documents</CardDescription>
@@ -43,20 +43,20 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
           <CardContent>
             <div className="flex justify-between text-sm">
               <div>
-                <span className="text-blue-500 font-medium">2.1 GB</span>
+                <span className="text-[#008C45] font-medium">2.1 GB</span>
                 <span className="text-gray-600 dark:text-gray-300 ml-1">used</span>
               </div>
             </div>
             <div className="mt-3">
               <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '35%' }}></div>
+                <div className="h-full bg-[#008C45]" style={{ width: '35%' }}></div>
               </div>
               <p className="text-xs text-gray-500 mt-1">35% of storage used</p>
             </div>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300">
-              <Plus className="mr-2 h-4 w-4 text-blue-500" />
+            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300">
+              <Plus className="mr-2 h-4 w-4 text-[#008C45]" />
               Create New Document
             </Button>
           </CardFooter>
@@ -64,7 +64,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#F0F9FF] to-[#E6F7FF] dark:from-green-950 dark:to-green-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <Users className="h-12 w-12 text-green-500" />
+            <Users className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">Images</CardDescription>
@@ -73,20 +73,20 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
           <CardContent>
             <div className="flex justify-between text-sm">
               <div>
-                <span className="text-green-500 font-medium">3.8 GB</span>
+                <span className="text-[#008C45] font-medium">3.8 GB</span>
                 <span className="text-gray-600 dark:text-gray-300 ml-1">used</span>
               </div>
             </div>
             <div className="mt-3">
               <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: '62%' }}></div>
+                <div className="h-full bg-[#008C45]" style={{ width: '62%' }}></div>
               </div>
               <p className="text-xs text-gray-500 mt-1">62% of storage used</p>
             </div>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-green-300 text-green-700 dark:text-green-300">
-              <Upload className="mr-2 h-4 w-4 text-green-500" />
+            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300">
+              <Upload className="mr-2 h-4 w-4 text-[#008C45]" />
               Upload Images
             </Button>
           </CardFooter>
@@ -133,7 +133,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
                   <CardTitle>Course Management</CardTitle>
                   <CardDescription>Manage your teaching materials and student enrollments</CardDescription>
                 </div>
-                <GraduationCap className="h-5 w-5 text-blue-500" />
+                <GraduationCap className="h-5 w-5 text-[#008C45]" />
               </div>
             </CardHeader>
             <CardContent>
@@ -143,7 +143,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base">Course Materials</CardTitle>
-                        <Upload className="h-4 w-4 text-blue-500" />
+                        <Upload className="h-4 w-4 text-[#008C45]" />
                       </div>
                     </CardHeader>
                     <CardContent className="pb-3">
@@ -162,7 +162,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base">Student Enrollment</CardTitle>
-                        <Users className="h-4 w-4 text-green-500" />
+                        <Users className="h-4 w-4 text-[#008C45]" />
                       </div>
                     </CardHeader>
                     <CardContent className="pb-3">
@@ -182,7 +182,7 @@ export function FacultyDashboard({ profile, user }: FacultyDashboardProps) {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">Course Analytics</CardTitle>
-                      <BarChart3 className="h-4 w-4 text-red-500" />
+                      <BarChart3 className="h-4 w-4 text-[#008C45]" />
                     </div>
                   </CardHeader>
                   <CardContent className="pb-3">

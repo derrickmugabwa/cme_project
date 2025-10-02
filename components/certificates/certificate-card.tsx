@@ -85,7 +85,7 @@ export function CertificateCard({ certificate }: CertificateCardProps) {
         <Button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="ml-auto flex items-center gap-2"
+          className="ml-auto flex items-center gap-2 bg-[#008C45] hover:bg-[#006633] text-white"
         >
           {isDownloading ? (
             <>

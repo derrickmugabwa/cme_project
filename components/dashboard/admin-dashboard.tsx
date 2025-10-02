@@ -303,18 +303,18 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 shadow-md">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#008C45] via-[#00a854] to-[#006633]"></div>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-blue-500" />
-                    <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Administrative Actions</CardTitle>
+                    <ShieldCheck className="h-5 w-5 text-[#008C45]" />
+                    <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#008C45] to-[#006633] dark:from-[#00a854] dark:to-[#008C45]">Administrative Actions</CardTitle>
                   </div>
                   <CardDescription className="mt-1 text-slate-500 dark:text-slate-400">Manage system operations and maintenance</CardDescription>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-full">
-                  <ShieldCheck className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                <div className="bg-[#E8F5E9] dark:bg-green-900/30 p-2 rounded-full">
+                  <ShieldCheck className="h-6 w-6 text-[#008C45] dark:text-green-400" />
                 </div>
               </div>
             </CardHeader>
@@ -412,21 +412,21 @@ export function AdminDashboard({ profile, user }: AdminDashboardProps) {
         
         <div>
           <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 shadow-md">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#008C45] via-[#00a854] to-[#006633]"></div>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-full">
-                    <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  <div className="bg-[#E8F5E9] dark:bg-green-900/30 p-2 rounded-full">
+                    <Activity className="h-5 w-5 text-[#008C45] dark:text-green-400" />
                   </div>
-                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">Recent Activity</CardTitle>
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#008C45] to-[#006633] dark:from-[#00a854] dark:to-[#008C45]">Recent Activity</CardTitle>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex justify-center items-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008C45]"></div>
                 </div>
               ) : recentActivities.length > 0 ? (
                 <div className="space-y-4">

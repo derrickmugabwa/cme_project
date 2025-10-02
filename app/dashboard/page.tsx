@@ -8,7 +8,6 @@ import { Database } from '@/lib/database.types'
 import { UserDashboard } from '@/components/dashboard/user-dashboard'
 import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CalendarDays, Clock, User } from 'lucide-react'
 import { LoadingPage } from '@/components/ui/loading-spinner'
 
@@ -56,19 +55,6 @@ export default function DashboardPage() {
     return <LoadingPage />
   }
 
-  // Get user initials for avatar fallback
-  const getInitials = () => {
-    if (profile?.full_name) {
-      return profile.full_name
-        .split(' ')
-        .map(name => name[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2)
-    }
-    return user?.email?.substring(0, 2).toUpperCase() || 'U'
-  }
-
   return (
     <div>
       {/* Page header with welcome message */}
@@ -78,12 +64,6 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">
             Here's what's happening with your account today.
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
-            <AvatarFallback>{getInitials()}</AvatarFallback>
-          </Avatar>
         </div>
       </div>
 

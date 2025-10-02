@@ -501,6 +501,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                       <h4 className="text-sm font-medium mb-2">Option 1: Send Reset Link</h4>
                       <Button
                         variant="outline"
+                        className="border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
                         onClick={async () => {
                           try {
                             const response = await fetch('/api/admin/users/reset-password', {
@@ -559,6 +560,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                         </div>
                         <Button
                           variant="default"
+                          className="bg-[#008C45] hover:bg-[#006633] text-white"
                           disabled={!newPassword || newPassword !== confirmNewPassword || newPassword.length < 6}
                           onClick={async () => {
                             try {
@@ -664,6 +666,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
         <Button 
           onClick={handleSave} 
           disabled={saving}
+          className="bg-[#008C45] hover:bg-[#006633] text-white"
         >
           {saving ? (
             <>

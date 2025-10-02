@@ -668,7 +668,7 @@ export default function UserUnitsClient() {
                     />
                     <Label
                       htmlFor="pesapal"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-primary bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-[140px]"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-[#008C45] bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-[140px]"
                     >
                       <div className="w-full h-full flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center justify-center space-y-0">
@@ -698,7 +698,7 @@ export default function UserUnitsClient() {
                   // Always use PesaPal
                   handleTopup('pesapal');
                 }}
-                className="w-full mt-4"
+                className="w-full mt-4 bg-[#008C45] hover:bg-[#006633] text-white"
                 disabled={isProcessing || topupAmount < 1}
                 size="lg"
               >
@@ -723,7 +723,7 @@ export default function UserUnitsClient() {
               {/* Payment Info */}
               <div className="text-xs text-muted-foreground text-center pt-2">
                 <p>Your payment is secure and processed instantly.</p>
-                <p className="mt-1">Need help? <a href="#" className="text-primary hover:underline">Contact support</a></p>
+                <p className="mt-1">Need help? <a href="#" className="text-[#008C45] hover:underline">Contact support</a></p>
               </div>
             </div>
           </CardContent>

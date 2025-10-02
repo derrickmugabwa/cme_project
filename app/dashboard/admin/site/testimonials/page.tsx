@@ -371,7 +371,7 @@ export default function TestimonialsSectionPage() {
           <Button
             variant="default"
             size="sm"
-            className="gap-1"
+            className="gap-1 bg-[#008C45] hover:bg-[#006633] text-white"
             onClick={handleSave}
             disabled={isSaving}
           >
@@ -541,7 +541,7 @@ export default function TestimonialsSectionPage() {
         
         <Button
           variant="outline"
-          className="w-full gap-1"
+          className="w-full gap-1 border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
           onClick={handleAddTestimonial}
         >
           <Plus className="h-4 w-4" />

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, Award, X } from 'lucide-react'
+import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, Award, X, FileBarChart } from 'lucide-react'
 import Image from 'next/image'
 
 interface Logo {
@@ -116,10 +116,16 @@ export function Sidebar({ isOpen = false, onClose, logo, userRole }: SidebarProp
               </NavItem>
             )}
             {isAdminOrFaculty && (
-              <NavItem href="/dashboard/attendance" onClose={onClose}>
-                <Calendar className="h-4 w-4" />
-                Attendance Management
-              </NavItem>
+              <>
+                <NavItem href="/dashboard/attendance" onClose={onClose}>
+                  <Calendar className="h-4 w-4" />
+                  Attendance Management
+                </NavItem>
+                <NavItem href="/dashboard/reports" onClose={onClose}>
+                  <FileBarChart className="h-4 w-4" />
+                  Reports
+                </NavItem>
+              </>
             )}
             
             {/* More universal items */}

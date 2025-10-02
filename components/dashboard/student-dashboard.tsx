@@ -32,7 +32,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#FFE2EC] to-[#FFF0F5] dark:from-pink-950 dark:to-pink-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <BookOpen className="h-12 w-12 text-pink-500" />
+            <BookOpen className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">My Enrollment</CardDescription>
@@ -42,8 +42,8 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
             <p className="text-sm text-gray-600 dark:text-gray-300">Courses enrolled</p>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-pink-300 text-pink-700 dark:text-pink-300">
-              <BookOpen className="mr-2 h-4 w-4 text-pink-500" />
+            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300">
+              <BookOpen className="mr-2 h-4 w-4 text-[#008C45]" />
               Browse Courses
             </Button>
           </CardFooter>
@@ -51,7 +51,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
         
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#E0F7FF] to-[#F0FAFF] dark:from-blue-950 dark:to-blue-900">
           <div className="absolute top-0 right-0 p-3 opacity-20">
-            <CheckCircle className="h-12 w-12 text-blue-500" />
+            <CheckCircle className="h-12 w-12 text-[#008C45]" />
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-gray-600 dark:text-gray-300">Attendance Rate</CardDescription>
@@ -74,8 +74,8 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
             </div>
           </CardContent>
           <CardFooter className="pt-0">
-            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-blue-300 text-blue-700 dark:text-blue-300">
-              <Users className="mr-2 h-4 w-4 text-blue-500" />
+            <Button variant="outline" size="sm" className="w-full bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 transition-colors border-[#008C45]/30 text-[#008C45] dark:text-green-300">
+              <Users className="mr-2 h-4 w-4 text-[#008C45]" />
               View Attendance
             </Button>
           </CardFooter>
@@ -111,7 +111,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
                   <CardTitle>My Learning Progress</CardTitle>
                   <CardDescription>Track your course completion</CardDescription>
                 </div>
-                <GraduationCap className="h-5 w-5 text-pink-500" />
+                <GraduationCap className="h-5 w-5 text-[#008C45]" />
               </div>
             </CardHeader>
             <CardContent>
@@ -123,7 +123,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
                   </div>
                   <div className="h-4 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-pink-500 to-pink-400 transition-all duration-500 ease-in-out" 
+                      className="h-full bg-gradient-to-r from-[#008C45] to-[#006633] transition-all duration-500 ease-in-out" 
                       style={{ width: `${progressData.percentage || 10}%` }}
                     ></div>
                   </div>
@@ -152,7 +152,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
                       </div>
                     </div>
                     <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
-                      <div style={{ width: "88%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-pink-500 to-pink-400"></div>
+                      <div style={{ width: "88%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-[#008C45] to-[#006633]"></div>
                     </div>
                   </div>
                   
@@ -181,7 +181,7 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle>Progress Statistics</CardTitle>
-                <BarChart2 className="h-5 w-5 text-pink-500" />
+                <BarChart2 className="h-5 w-5 text-[#008C45]" />
               </div>
             </CardHeader>
             <CardContent>
@@ -280,11 +280,11 @@ export function StudentDashboard({ profile, user }: StudentDashboardProps) {
                     </td>
                     <td className="px-4 py-3 w-32">
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-pink-500 to-pink-400 h-2 rounded-full" style={{ width: '75%' }}></div>
+                        <div className="bg-gradient-to-r from-[#008C45] to-[#006633] h-2 rounded-full" style={{ width: '75%' }}></div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Button size="sm" className="bg-[#e91e63] hover:bg-[#e91e63]/90 text-white">Continue</Button>
+                      <Button size="sm" className="bg-[#008C45] hover:bg-[#006633] text-white">Continue</Button>
                     </td>
                   </tr>
                 </tbody>

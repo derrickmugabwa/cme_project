@@ -4,6 +4,11 @@ import { SessionReminderDetails, EmailSendResult } from '@/lib/types/reminder-ty
 // Initialize Resend with API key from environment variables
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Email sender configuration from environment variables
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'CME Webinars';
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
+const EMAIL_FROM = `${EMAIL_FROM_NAME} <${EMAIL_FROM_ADDRESS}>`;
+
 /**
  * Interface for webinar details
  */
@@ -49,7 +54,7 @@ export async function sendEnrollmentConfirmation(
     
     console.log(`Sending email via Resend to ${recipientEmail}...`);
     const { data, error } = await resend.emails.send({
-      from: 'CME Webinars <onboarding@resend.dev>', // Using Resend's test domain
+      from: EMAIL_FROM,
       to: [recipientEmail],
       subject: `${subjectPrefix}Enrollment Confirmation: ${webinarDetails.title}`,
       html: generateEnrollmentEmailHtml(userName, webinarDetails),
@@ -113,7 +118,7 @@ function generateEnrollmentEmailHtml(userName: string, webinarDetails: WebinarDe
           padding: 20px;
         }
         .header {
-          background-color: #4f46e5;
+          background: linear-gradient(135deg, #008C45 0%, #006633 100%);
           padding: 20px;
           color: white;
           text-align: center;
@@ -126,13 +131,14 @@ function generateEnrollmentEmailHtml(userName: string, webinarDetails: WebinarDe
           border-radius: 0 0 5px 5px;
         }
         .webinar-details {
-          background-color: #f9fafb;
+          background-color: #f0fdf9;
           padding: 15px;
           border-radius: 5px;
           margin: 20px 0;
+          border-left: 4px solid #008C45;
         }
         .webinar-title {
-          color: #4f46e5;
+          color: #008C45;
           margin-top: 0;
         }
         .footer {
@@ -143,7 +149,7 @@ function generateEnrollmentEmailHtml(userName: string, webinarDetails: WebinarDe
         }
         .button {
           display: inline-block;
-          background-color: #4f46e5;
+          background: linear-gradient(135deg, #008C45 0%, #006633 100%);
           color: white;
           text-decoration: none;
           padding: 10px 20px;
@@ -207,7 +213,7 @@ export async function sendSessionReminder(
       .replace('{session_title}', sessionDetails.title);
     
     const { data, error } = await resend.emails.send({
-      from: 'CME Webinars <onboarding@resend.dev>',
+      from: EMAIL_FROM,
       to: [recipientEmail],
       subject: `${subjectPrefix}${subject}`,
       html: generateReminderEmailHtml(userName, sessionDetails),
@@ -367,7 +373,9 @@ function getCallToAction(minutesBefore: number, joinUrl?: string): string {
 
 function getEmailStyles(urgencyLevel: string): string {
   const baseColor = urgencyLevel === 'urgent' ? '#dc2626' : 
-                   urgencyLevel === 'soon' ? '#ea580c' : '#4f46e5';
+                   urgencyLevel === 'soon' ? '#f59e0b' : '#008C45';
+  const gradientEnd = urgencyLevel === 'urgent' ? '#b91c1c' : 
+                      urgencyLevel === 'soon' ? '#d97706' : '#006633';
   
   return `
     body {
@@ -385,13 +393,13 @@ function getEmailStyles(urgencyLevel: string): string {
       border-radius: 5px 5px 0 0;
     }
     .header.urgent {
-      background-color: #dc2626;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     }
     .header.soon {
-      background-color: #ea580c;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
     .header.advance {
-      background-color: #4f46e5;
+      background: linear-gradient(135deg, #008C45 0%, #006633 100%);
     }
     .content {
       padding: 20px;
@@ -400,10 +408,11 @@ function getEmailStyles(urgencyLevel: string): string {
       border-radius: 0 0 5px 5px;
     }
     .session-details {
-      background-color: #f9fafb;
+      background-color: #f0fdf9;
       padding: 15px;
       border-radius: 5px;
       margin: 20px 0;
+      border-left: 4px solid ${baseColor};
     }
     .session-title {
       color: ${baseColor};
@@ -417,7 +426,7 @@ function getEmailStyles(urgencyLevel: string): string {
     }
     .button {
       display: inline-block;
-      background-color: ${baseColor};
+      background: linear-gradient(135deg, ${baseColor} 0%, ${gradientEnd} 100%);
       color: white;
       text-decoration: none;
       padding: 12px 24px;
@@ -426,7 +435,7 @@ function getEmailStyles(urgencyLevel: string): string {
       font-weight: bold;
     }
     .button.urgent {
-      background-color: #dc2626;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
       animation: pulse 2s infinite;
     }
     @keyframes pulse {
