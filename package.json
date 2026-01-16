@@ -41,7 +41,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.510.0",
-    "next": "15.3.2",
+    "next": "15.3.8",
     "node-fetch": "^3.3.2",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
