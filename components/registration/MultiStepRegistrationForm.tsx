@@ -61,6 +61,7 @@ export function MultiStepRegistrationForm({ logo }: MultiStepRegistrationFormPro
                   src={logo.url}
                   alt={logo.alt_text}
                   fill
+                  sizes="(max-width: 768px) 160px, 192px"
                   className="object-contain"
                   priority
                 />

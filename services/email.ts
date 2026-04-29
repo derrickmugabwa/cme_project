@@ -28,35 +28,23 @@ export interface WebinarDetails {
 /**
  * Send enrollment confirmation email to user
  */
-// The verified email address for testing
-const VERIFIED_TEST_EMAIL = 'deriquemugabwa@gmail.com';
-
 export async function sendEnrollmentConfirmation(
-  userEmail: string, 
+  userEmail: string,
   userName: string,
   webinarDetails: WebinarDetails
 ) {
-  console.log(`Attempting to send enrollment confirmation email to ${userEmail} for webinar: ${webinarDetails.title}`);
-  
+  console.log(`Sending enrollment confirmation to ${userEmail} for webinar: ${webinarDetails.title}`);
+
   try {
-    // Check if API key is configured
     if (!process.env.RESEND_API_KEY) {
       console.error('RESEND_API_KEY is not configured in environment variables');
       return { success: false, error: 'API key not configured' };
     }
-    
-    // In development/testing, we'll send all emails to the verified test email
-    // In production, you would remove this and send to the actual user email
-    const recipientEmail = process.env.NODE_ENV === 'production' ? userEmail : VERIFIED_TEST_EMAIL;
-    
-    // Add a note in the subject if we're redirecting the email
-    const subjectPrefix = recipientEmail !== userEmail ? `[Originally for: ${userEmail}] ` : '';
-    
-    console.log(`Sending email via Resend to ${recipientEmail}...`);
+
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
-      to: [recipientEmail],
-      subject: `${subjectPrefix}Enrollment Confirmation: ${webinarDetails.title}`,
+      to: [userEmail],
+      subject: `Enrollment Confirmation: ${webinarDetails.title}`,
       html: generateEnrollmentEmailHtml(userName, webinarDetails),
     });
 
@@ -65,10 +53,10 @@ export async function sendEnrollmentConfirmation(
       return { success: false, error };
     }
 
-    console.log('Email sent successfully!', {
+    console.log('Enrollment confirmation sent successfully', {
       emailId: data?.id,
       recipient: userEmail,
-      webinar: webinarDetails.title
+      webinar: webinarDetails.title,
     });
     return { success: true, data };
   } catch (error) {
@@ -179,10 +167,10 @@ function generateEnrollmentEmailHtml(userName: string, webinarDetails: WebinarDe
         
         <p>If you have any questions, please don't hesitate to contact our support team.</p>
         
-        <p>Best regards,<br>CME Webinars Team</p>
+        <p>Best regards,<br>CME Team</p>
       </div>
       <div class="footer">
-        <p>© ${new Date().getFullYear()} CME Webinars. All rights reserved.</p>
+        <p>© ${new Date().getFullYear()} Metropolisafrica. All rights reserved.</p>
         <p>This email was sent to you because you enrolled in a webinar on our platform.</p>
       </div>
     </body>
@@ -199,56 +187,48 @@ export async function sendSessionReminder(
   sessionDetails: SessionReminderDetails
 ): Promise<EmailSendResult> {
   console.log(`Sending ${sessionDetails.reminderType} reminder to ${userEmail} for session: ${sessionDetails.title}`);
-  
+
   try {
     if (!process.env.RESEND_API_KEY) {
       return { success: false, error: 'RESEND_API_KEY not configured', shouldRetry: false };
     }
-    
-    const recipientEmail = process.env.NODE_ENV === 'production' ? userEmail : VERIFIED_TEST_EMAIL;
-    const subjectPrefix = recipientEmail !== userEmail ? `[Originally for: ${userEmail}] ` : '';
-    
-    // Use template from configuration
+
     const subject = sessionDetails.reminderConfig.email_subject_template
       .replace('{session_title}', sessionDetails.title);
-    
+
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
-      to: [recipientEmail],
-      subject: `${subjectPrefix}${subject}`,
+      to: [userEmail],
+      subject,
       html: generateReminderEmailHtml(userName, sessionDetails),
     });
 
     if (error) {
-      // Check if it's a rate limit error
-      const errorMessage = typeof error === 'object' && error !== null && 'message' in error 
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error
         ? (error as any).message : String(error);
-      const errorStatus = typeof error === 'object' && error !== null && 'status' in error 
+      const errorStatus = typeof error === 'object' && error !== null && 'status' in error
         ? (error as any).status : null;
-        
-      const isRateLimit = errorMessage?.includes('rate limit') || 
-                         errorMessage?.includes('too many requests') ||
-                         errorStatus === 429;
-      
-      return { 
-        success: false, 
-        error, 
-        shouldRetry: isRateLimit // Retry rate limit errors, not other errors
-      };
+
+      const isRateLimit =
+        errorMessage?.includes('rate limit') ||
+        errorMessage?.includes('too many requests') ||
+        errorStatus === 429;
+
+      return { success: false, error, shouldRetry: isRateLimit };
     }
 
     return { success: true, data };
   } catch (error: unknown) {
-    // Network errors should be retried
-    const errorCode = typeof error === 'object' && error !== null && 'code' in error 
+    const errorCode = typeof error === 'object' && error !== null && 'code' in error
       ? (error as any).code : null;
-    const errorMessage = typeof error === 'object' && error !== null && 'message' in error 
+    const errorMessage = typeof error === 'object' && error !== null && 'message' in error
       ? (error as any).message : String(error);
-      
-    const shouldRetry = errorCode === 'ECONNRESET' || 
-                       errorCode === 'ETIMEDOUT' ||
-                       errorMessage?.includes('network');
-    
+
+    const shouldRetry =
+      errorCode === 'ECONNRESET' ||
+      errorCode === 'ETIMEDOUT' ||
+      errorMessage?.includes('network');
+
     return { success: false, error, shouldRetry };
   }
 }

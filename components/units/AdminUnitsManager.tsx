@@ -222,7 +222,7 @@ export default function AdminUnitsManager() {
           <Button
             onClick={handleTopUp}
             disabled={submitting || !selectedUserId || amount <= 0}
-            className="w-full"
+            className="w-full bg-[#008C45] hover:bg-[#006633] text-white"
           >
             {submitting ? (
               <>

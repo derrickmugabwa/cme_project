@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import MediaManager from '@/components/sessions/MediaManager';
 import { SessionMedia } from '@/types/session-media';
+import QuestionManager, { DraftQuestion } from '@/components/sessions/QuestionManager';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -63,6 +64,9 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
   
   // Media state
   const [sessionMedia, setSessionMedia] = useState<SessionMedia[]>([]);
+  
+  // Questions state
+  const [initialQuestions, setInitialQuestions] = useState<DraftQuestion[]>([]);
   
   // Extract session ID from params
   useEffect(() => {
@@ -151,6 +155,31 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
     }
     
     loadSessionData();
+  }, [sessionId]);
+
+  // Load existing questions for this session
+  useEffect(() => {
+    if (!sessionId) return;
+    async function loadQuestions() {
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}/questions`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setInitialQuestions(
+          (data.questions ?? []).map((q: any) => ({
+            id: q.id,
+            question_text: q.question_text,
+            question_order: q.question_order,
+            question_type: q.question_type || 'free_text',
+            options: q.options || undefined,
+            correct_answer: q.correct_answer || undefined,
+          }))
+        );
+      } catch {
+        // non-fatal
+      }
+    }
+    loadQuestions();
   }, [sessionId]);
   
   // Form submission
@@ -421,6 +450,20 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
               initialMedia={sessionMedia}
               onChange={setSessionMedia}
               canEdit={true}
+            />
+          </CardContent>
+        </Card>
+      )}
+      {/* Questions Management Section */}
+      {sessionId && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Webinar Questions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <QuestionManager
+              sessionId={sessionId}
+              initialQuestions={initialQuestions}
             />
           </CardContent>
         </Card>

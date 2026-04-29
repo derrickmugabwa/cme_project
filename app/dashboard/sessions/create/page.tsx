@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import MediaUploadZone from '@/components/sessions/MediaUploadZone';
 import { SessionMedia } from '@/types/session-media';
+import QuestionManager, { DraftQuestion } from '@/components/sessions/QuestionManager';
 
 // Supabase client will be initialized in the component
 
@@ -46,6 +47,9 @@ export default function CreateSessionPage() {
   
   // Media state
   const [sessionMedia, setSessionMedia] = useState<SessionMedia[]>([]);
+  
+  // Question draft state (saved after session is created)
+  const [draftQuestions, setDraftQuestions] = useState<DraftQuestion[]>([]);
   
   // Check Microsoft auth status
   useEffect(() => {
@@ -289,6 +293,31 @@ export default function CreateSessionPage() {
           return;
         }
         
+        // Save draft questions to the newly-created session
+        if (draftQuestions.length > 0 && result.session?.id) {
+          const newSessionId = result.session.id;
+          try {
+            await Promise.all(
+              draftQuestions.map((q) =>
+                fetch(`/api/sessions/${newSessionId}/questions`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    question_text: q.question_text,
+                    question_order: q.question_order,
+                    question_type: q.question_type || 'free_text',
+                    options: q.options || null,
+                    correct_answer: q.correct_answer || null,
+                  }),
+                })
+              )
+            );
+          } catch (qErr) {
+            console.error('Error saving questions:', qErr);
+            // Non-fatal — session was created, questions can be added later
+          }
+        }
+        
         // Upload media files if any were staged
         if (sessionMedia.length > 0 && result.session?.id) {
           console.log(`Uploading ${sessionMedia.length} media files for session ${result.session.id}`);
@@ -364,14 +393,11 @@ export default function CreateSessionPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Create Webinar</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push('/dashboard/sessions')} className="px-4">
-            Discard
-          </Button>
           <Button 
             type="submit" 
             form="session-form"
             disabled={loading || (isOnline && onlineProvider === 'teams' && hasMicrosoftAuth === false && !useManualLink)}
-            className="px-4"
+            className="px-4 bg-[#008C45] hover:bg-[#006633] text-white"
           >
             {loading ? 'Creating...' : 'Create Webinar'}
           </Button>
@@ -538,7 +564,6 @@ export default function CreateSessionPage() {
                         <Video className="w-6 h-6" />
                       </div>
                       <span className="text-sm font-medium">Zoom</span>
-                      <span className="text-xs text-gray-500">(Coming Soon)</span>
                     </div>
                     
                     <div 
@@ -549,7 +574,6 @@ export default function CreateSessionPage() {
                         <MessageSquare className="w-6 h-6" />
                       </div>
                       <span className="text-sm font-medium">Google Meet</span>
-                      <span className="text-xs text-gray-500">(Coming Soon)</span>
                     </div>
                   </div>
                 </div>
@@ -671,6 +695,20 @@ export default function CreateSessionPage() {
                   />
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Questions Section */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Webinar Questions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QuestionManager
+                onChange={setDraftQuestions}
+              />
             </CardContent>
           </Card>
         </div>

@@ -88,6 +88,7 @@ export const Navbar = ({ logo }: NavbarProps) => {
                   src={logo.url}
                   alt={logo.alt_text}
                   fill
+                  sizes="(max-width: 768px) 176px, 208px"
                   className="object-contain"
                   priority
                 />
@@ -223,7 +224,7 @@ export const Navbar = ({ logo }: NavbarProps) => {
                   Sign In
                 </Link>
                 <Link
-                  href="/auth/signup"
+                  href="/auth/sign-up"
                   className="px-4 py-2 rounded-lg text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

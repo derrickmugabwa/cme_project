@@ -153,7 +153,7 @@ export default function UnitCostManager() {
         <Button 
           onClick={handleSave} 
           disabled={loading || saving}
-          className="ml-auto"
+          className="ml-auto bg-[#008C45] hover:bg-[#006633] text-white"
         >
           {saving ? (
             <>

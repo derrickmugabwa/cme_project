@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/client'
+import { performCompleteLogin } from '@/lib/auth-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -65,6 +66,10 @@ export function LoginForm({ logo, className, ...props }: LoginFormProps) {
           toast.dismiss(loadingToast)
           toast.error('Your account has been disabled. Please contact an administrator.')
           setError('Your account has been disabled. Please contact an administrator.')
+          // Clear any cached data by forcing a page refresh
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000) // Give time for the error message to be seen
           return
         }
       }
@@ -73,8 +78,8 @@ export function LoginForm({ logo, className, ...props }: LoginFormProps) {
       toast.dismiss(loadingToast)
       toast.success('Logged in successfully!')
       
-      // Redirect to the dashboard after successful login
-      router.push('/dashboard')
+      // Perform complete login with proper session initialization
+      performCompleteLogin()
     } catch (error: unknown) {
       toast.dismiss(loadingToast)
       const errorMessage = error instanceof Error ? error.message : 'An error occurred'
@@ -100,6 +105,7 @@ export function LoginForm({ logo, className, ...props }: LoginFormProps) {
                   src={logo.url}
                   alt={logo.alt_text}
                   fill
+                  sizes="(max-width: 768px) 160px, 192px"
                   className="object-contain"
                   priority
                 />

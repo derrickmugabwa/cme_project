@@ -106,6 +106,7 @@ export const FooterSection = ({ settings, logo, footerData }: FooterSectionProps
                     src={logo.url}
                     alt={logo.alt_text}
                     fill
+                    sizes="192px"
                     className="object-contain p-1"
                   />
                 ) : (

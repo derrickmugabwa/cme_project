@@ -1,0 +1,133 @@
+# Webinar Questions & Answers Feature
+
+Admins should be able to attach questions to a webinar during creation (or editing). Enrolled users see those questions on the webinar detail page and can submit answers. Admins and faculty can view all submitted answers.
+
+---
+
+## Proposed Changes
+
+### 1. Database — New Migration
+
+#### [NEW] `supabase/migrations/20260428_webinar_questions.sql`
+
+Two new tables:
+
+| Table | Purpose |
+|-------|---------|
+| `session_questions` | Questions created by admin, linked to a session |
+| `session_question_answers` | Answers submitted by enrolled users |
+
+**`session_questions`**
+```
+id UUID PK
+session_id UUID FK → sessions(id)
+question_text TEXT NOT NULL
+question_order INT DEFAULT 1
+created_by UUID FK → profiles(id)
+created_at TIMESTAMPTZ
+updated_at TIMESTAMPTZ
+```
+
+**`session_question_answers`**
+```
+id UUID PK
+question_id UUID FK → session_questions(id)
+user_id UUID FK → profiles(id)
+answer_text TEXT NOT NULL
+created_at TIMESTAMPTZ
+updated_at TIMESTAMPTZ
+UNIQUE(question_id, user_id)   -- one answer per user per question
+```
+
+**RLS policies:**
+- `session_questions`: Everyone can SELECT; only admin/faculty can INSERT/UPDATE/DELETE
+- `session_question_answers`: Users can SELECT/INSERT/UPDATE their own answers; admins and faculty can SELECT all answers
+
+---
+
+### 2. API Routes
+
+#### [NEW] `app/api/sessions/[id]/questions/route.ts`
+- `GET` — Return all questions for a session (with answer count for admin/faculty, or user's own answer if user)
+- `POST` — Admin-only: create a question for a session
+
+#### [NEW] `app/api/sessions/[id]/questions/[questionId]/route.ts`
+- `PATCH` — Admin-only: edit question text / order
+- `DELETE` — Admin-only: delete a question
+
+#### [NEW] `app/api/sessions/[id]/questions/[questionId]/answers/route.ts`
+- `GET` — Admin/faculty only: get all answers for this question
+- `POST` — Enrolled user: submit or update their answer
+
+---
+
+### 3. UI Components
+
+#### [NEW] `components/sessions/WebinarQuestions.tsx`
+A shared client component rendered on the webinar detail page. Adapts its display based on the current user role:
+- **Admin/Faculty view:** "Questions" tab with a list of all questions, each expandable to show all user answers in a table
+- **User view (enrolled):** A form per question where they can type and submit/update their answer
+
+#### [NEW] `components/sessions/QuestionManager.tsx`
+Admin-only sub-component embedded inside the **Create** and **Edit** webinar forms. Allows:
+- Adding new questions (text input + "Add" button)
+- Reordering questions (up/down arrows)
+- Deleting questions
+
+> [!NOTE]
+> On the **Create** page, questions will be saved after the session is created (we get the session ID from the API response, then POST each question). This keeps the create flow clean without restructuring it.
+
+---
+
+### 4. Create Session Page
+
+#### [MODIFY] `app/dashboard/sessions/create/page.tsx`
+- Add a **"Questions"** card in the right sidebar (below Session Media)
+- Use `QuestionManager` component to let the admin draft questions locally (stored in component state)
+- After the session is created successfully (we have `result.session.id`), POST each question to the questions API
+
+---
+
+### 5. Edit Session Page
+
+#### [MODIFY] `app/dashboard/sessions/[id]/edit/page.tsx`
+- Add the same **"Questions"** card
+- On mount, fetch existing questions via `GET /api/sessions/[id]/questions`
+- `QuestionManager` can add, edit order, or delete questions live (calling the API directly since the session already exists)
+
+---
+
+### 6. Webinar Detail Page (user + admin view)
+
+#### [MODIFY] `app/dashboard/sessions/[id]/client.tsx`
+- Add a new **"Webinar Questions"** `Card` section below the Session Media card
+- Render `<WebinarQuestions sessionId={sessionId} userRole={currentUserRole} isEnrolled={isEnrolled} userId={authSession?.user?.id} />`
+- The component itself handles role-based rendering
+
+---
+
+## Verification Plan
+
+### Automated
+- Dev server starts cleanly (`npm run dev`)
+- API routes return correct HTTP status codes via browser network tab
+
+### Manual
+1. Admin creates a webinar with 2–3 questions → questions persist (check Supabase table)
+2. Enrolled user opens the webinar → sees the questions form, can submit answers
+3. User edits and re-submits an answer → answer is updated (upsert)
+4. Admin/Faculty open the webinar → sees all user answers per question
+5. Non-enrolled user opens the webinar → questions section is hidden or shows "Enroll to answer"
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Question types**: Should questions be free-text only, or do you also want multiple-choice / single-select options? The plan above assumes **free-text only**. Let me know if you need MCQ support.
+
+> [!IMPORTANT]
+> **Answer visibility to users**: After a user submits an answer, should they be able to see other users' answers, or should answers only be visible to admins/faculty?
+
+> [!NOTE]
+> **Mandatory vs optional**: Should questions be mandatory (block the user from viewing the meeting link until answered), or entirely optional? Current plan makes them optional.

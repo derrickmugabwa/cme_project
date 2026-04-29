@@ -81,6 +81,7 @@ export function DashboardShell({
                     src={logo.url}
                     alt={logo.alt_text}
                     fill
+                    sizes="128px"
                     className="object-contain p-0.5"
                   />
                 ) : (

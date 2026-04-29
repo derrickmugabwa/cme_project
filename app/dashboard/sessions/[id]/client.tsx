@@ -15,6 +15,7 @@ import EnrollButton from '@/components/units/EnrollButton';
 import { LoadingPage, LoadingSpinner } from '@/components/ui/loading-spinner';
 import { SessionCertificate } from '@/components/certificates/session-certificate';
 import SessionMediaViewer from '@/components/sessions/SessionMediaViewer';
+import WebinarQuestions from '@/components/sessions/WebinarQuestions';
 import { PlayCircle } from 'lucide-react';
 
 interface Session {
@@ -383,18 +384,9 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         </div>
         <div className="flex space-x-2">
           <Button
-            variant="outline"
-            onClick={() => window.print()}
-            className="flex items-center space-x-1"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clipRule="evenodd" />
-            </svg>
-            <span>Print</span>
-          </Button>
-          <Button
             onClick={() => router.push(`/dashboard/sessions/${sessionId}/edit`)}
-            className="flex items-center space-x-1"
+            className="flex items-center space-x-1 bg-[#008C45] hover:bg-[#006633] text-white"
+         
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -646,6 +638,28 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
             sessionId={sessionId}
             canEdit={currentUserRole === 'admin' || (session && session.created_by === authSession?.user?.id)}
             userRole={currentUserRole || undefined}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Webinar Questions Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Webinar Questions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WebinarQuestions
+            sessionId={sessionId}
+            userRole={currentUserRole}
+            isEnrolled={isEnrolled}
+            userId={authSession?.user?.id}
           />
         </CardContent>
       </Card>

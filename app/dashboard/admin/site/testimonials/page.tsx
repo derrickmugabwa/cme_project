@@ -477,6 +477,7 @@ export default function TestimonialsSectionPage() {
                               src={previewImages[testimonial.id] as string}
                               alt={testimonial.name || "Avatar"}
                               fill
+                              sizes="64px"
                               className="object-cover"
                             />
                           ) : (

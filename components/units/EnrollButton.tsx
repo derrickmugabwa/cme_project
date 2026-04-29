@@ -128,36 +128,51 @@ export default function EnrollButton({ sessionId, onEnrollmentChange }: EnrollBu
   // Add null check and default values to prevent undefined access
   const hasEnoughUnits = (enrollmentStatus?.userUnits ?? 0) >= (enrollmentStatus?.unitRequirement ?? 0);
 
+  const isFreeSession = (enrollmentStatus?.unitRequirement ?? 0) === 0;
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center">
-          <Coins className="mr-1 h-4 w-4 text-primary" />
-          <span>Required:</span>
+      {isFreeSession ? (
+        <div className="flex items-center justify-center text-sm">
+          <div className="flex items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg">
+            <CheckCircle className="mr-2 h-4 w-4" />
+            <span className="font-medium">Free Session</span>
+          </div>
         </div>
-        <span className="font-medium">{enrollmentStatus?.unitRequirement} Units</span>
-      </div>
-      
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center">
-          <Coins className="mr-1 h-4 w-4 text-primary" />
-          <span>Your balance:</span>
-        </div>
-        <span className={`font-medium ${!hasEnoughUnits ? 'text-red-500' : ''}`}>
-          {enrollmentStatus?.userUnits} Units
-        </span>
-      </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <Coins className="mr-1 h-4 w-4 text-primary" />
+              <span>Required:</span>
+            </div>
+            <span className="font-medium">{enrollmentStatus?.unitRequirement} Units</span>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <Coins className="mr-1 h-4 w-4 text-primary" />
+              <span>Your balance:</span>
+            </div>
+            <span className={`font-medium ${!hasEnoughUnits ? 'text-red-500' : ''}`}>
+              {enrollmentStatus?.userUnits} Units
+            </span>
+          </div>
+        </>
+      )}
       
       <Button 
         onClick={handleEnroll} 
-        disabled={enrolling || !hasEnoughUnits}
-        className="w-full mt-2"
+        disabled={enrolling || (!hasEnoughUnits && !isFreeSession)}
+        className="w-full mt-2 bg-[#008C45] hover:bg-[#006633] text-white"
       >
         {enrolling ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Enrolling...
           </>
+        ) : isFreeSession ? (
+          'Enroll Now (Free)'
         ) : hasEnoughUnits ? (
           'Enroll Now'
         ) : (

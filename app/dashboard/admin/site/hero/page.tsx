@@ -279,6 +279,7 @@ export default function HeroSectionPage() {
                       src={previewImage}
                       alt="Hero image preview"
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-cover"
                     />
                   </div>

@@ -99,9 +99,9 @@ export default function SessionUnitRequirementManager({
         </CardTitle>
         <CardDescription>
           {sessionTitle ? (
-            <>Set the number of units required to enroll in <strong>{sessionTitle}</strong></>
+            <>Set the number of units required to enroll in <strong>{sessionTitle}</strong>. Set to 0 for free sessions.</>
           ) : (
-            'Set the number of units required to enroll in this session'
+            'Set the number of units required to enroll in this session. Set to 0 for free sessions.'
           )}
         </CardDescription>
       </CardHeader>
@@ -123,10 +123,12 @@ export default function SessionUnitRequirementManager({
                   value={unitsRequired}
                   onChange={(e) => setUnitsRequired(parseInt(e.target.value) || 0)}
                   className="flex-1"
+                  placeholder="0 for free session"
                 />
                 <Button 
                   onClick={handleSave} 
                   disabled={submitting || unitsRequired === unitRequirement?.units_required}
+                  className="bg-[#008C45] hover:bg-[#006633] text-white"
                 >
                   {submitting ? (
                     <>
@@ -138,6 +140,11 @@ export default function SessionUnitRequirementManager({
                   )}
                 </Button>
               </div>
+              {unitsRequired === 0 && (
+                <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                  ✓ This session is set as free - users can enroll without spending units
+                </p>
+              )}
             </div>
             
             <div className="text-sm text-muted-foreground">

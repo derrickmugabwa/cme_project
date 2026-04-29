@@ -74,6 +74,7 @@ export const TestimonialsSection = ({ data }: TestimonialsSectionProps) => {
                       src={testimonial.avatar_url || "/images/avatars/avatar-1.png"}
                       alt={testimonial.name}
                       fill
+                      sizes="80px"
                       className="object-cover"
                     />
                   </div>

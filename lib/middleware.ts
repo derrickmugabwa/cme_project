@@ -62,6 +62,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Handle logout cleanup - clear any cached responses for auth pages
+  if (request.nextUrl.pathname === '/auth/login') {
+    supabaseResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    supabaseResponse.headers.set('Pragma', 'no-cache')
+    supabaseResponse.headers.set('Expires', '0')
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

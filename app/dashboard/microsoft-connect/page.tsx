@@ -281,7 +281,7 @@ export default function MicrosoftConnectPage() {
             <Button 
               onClick={handleConnect} 
               disabled={loading}
-              className="w-full"
+              className="w-full bg-[#008C45] hover:bg-[#006633] text-white"
             >
               {loading ? 'Connecting...' : 'Connect Microsoft Account'}
             </Button>

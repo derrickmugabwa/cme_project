@@ -145,6 +145,7 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
                   src={data.image_url || "/images/hero-dashboard.png"}
                   alt="CME Platform Dashboard"
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover"
                   priority
                 />

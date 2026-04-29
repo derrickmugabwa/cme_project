@@ -66,6 +66,7 @@ export function Sidebar({ isOpen = false, onClose, logo, userRole }: SidebarProp
                   src={logo.url}
                   alt={logo.alt_text}
                   fill
+                  sizes="176px"
                   className="object-contain"
                   priority
                 />
@@ -99,13 +100,13 @@ export function Sidebar({ isOpen = false, onClose, logo, userRole }: SidebarProp
               <Home className="h-4 w-4" />
               Dashboard
             </NavItem>
-            <NavItem href="/dashboard/content" onClose={onClose}>
-              <FileText className="h-4 w-4" />
-              Educational Content
-            </NavItem>
             <NavItem href="/dashboard/sessions" onClose={onClose}>
               <Video className="h-4 w-4" />
               Webinars
+            </NavItem>
+            <NavItem href="/dashboard/content" onClose={onClose}>
+              <FileText className="h-4 w-4" />
+              Educational Content
             </NavItem>
             
             {/* Role-based items - no loading needed */}
