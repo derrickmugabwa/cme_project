@@ -4,8 +4,10 @@ import { EMAIL_BATCH_CONFIG } from "./batch-config";
 
 // Main scheduled function - runs every 15 minutes to check for reminders
 export const processReminderEmails = inngest.createFunction(
-  { id: "process-reminder-emails" },
-  { cron: "*/15 * * * *" }, // Every 15 minutes
+  {
+    id: "process-reminder-emails",
+    triggers: [{ cron: "*/15 * * * *" }], // Every 15 minutes
+  },
   async ({ step }) => {
     // Get all enabled reminder configurations
     const configs = await step.run("get-reminder-configs", async () => {
@@ -52,8 +54,10 @@ export const processReminderEmails = inngest.createFunction(
 
 // Event-driven function for scheduling reminders when users enroll
 export const scheduleSessionReminders = inngest.createFunction(
-  { id: "schedule-session-reminders" },
-  { event: "session/user.enrolled" },
+  {
+    id: "schedule-session-reminders",
+    triggers: [{ event: "session/user.enrolled" }],
+  },
   async ({ event, step }) => {
     const { sessionId, userId, sessionStartTime } = event.data;
 
@@ -135,8 +139,10 @@ export const scheduleSessionReminders = inngest.createFunction(
 
 // Individual reminder sender
 export const sendSessionReminder = inngest.createFunction(
-  { id: "send-session-reminder" },
-  { event: "reminder/send.individual" },
+  {
+    id: "send-session-reminder",
+    triggers: [{ event: "reminder/send.individual" }],
+  },
   async ({ event, step }) => {
     const { sessionId, userId, reminderType } = event.data;
 
@@ -170,8 +176,10 @@ export const sendSessionReminder = inngest.createFunction(
 
 // Manual trigger function for admin use
 export const triggerManualReminders = inngest.createFunction(
-  { id: "trigger-manual-reminders" },
-  { event: "admin/trigger.reminders" },
+  {
+    id: "trigger-manual-reminders",
+    triggers: [{ event: "admin/trigger.reminders" }],
+  },
   async ({ event, step }) => {
     const { sessionId, reminderTypes, triggeredBy } = event.data;
 

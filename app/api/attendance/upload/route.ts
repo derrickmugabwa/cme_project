@@ -27,12 +27,6 @@ function detectFileEncoding(buffer: Buffer): BufferEncoding {
   return 'utf8';
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 /**
  * API endpoint for uploading Teams attendance files
  * POST /api/attendance/upload
