@@ -37,7 +37,7 @@
     "dotenv": "^16.5.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.15.0",
-    "inngest": "^3.43.1",
+    "inngest": "^4.2.5",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.510.0",
