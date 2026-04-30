@@ -1,4 +1,7 @@
-import { createClient } from '@/lib/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export interface Logo {
   id: string;
@@ -11,20 +14,21 @@ export interface Logo {
 /**
  * Server-side logo fetching service
  * Fetches logo data from Supabase for SSR components
+ * Uses a plain client (no cookies) to avoid Dynamic server usage errors during static generation
  */
 export async function fetchLogo(): Promise<Logo | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const { data: logoData, error } = await supabase
       .from('landing_logo')
       .select('*')
       .single();
-    
+
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching logo:', error);
       return null;
     }
-    
+
     return logoData;
   } catch (error) {
     console.error('Error fetching logo:', error);
