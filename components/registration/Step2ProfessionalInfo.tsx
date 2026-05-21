@@ -19,8 +19,10 @@ const schema = yup.object().shape({
   registrationNumber: yup.string().required('Registration number is required'),
   professionalBoard: yup.string().required('Professional board is required'),
   institution: yup.string().required('Institution is required'),
-  acceptedTerms: yup.boolean().oneOf([true], 'You must accept the terms and policy'),
+  acceptedTerms: yup.boolean().required('You must accept the terms and policy').oneOf([true], 'You must accept the terms and policy'),
 });
+
+type Step2ProfessionalInfoFormValues = yup.InferType<typeof schema>;
 
 export function Step2ProfessionalInfo() {
   const { formData, setFormValue, goToPreviousStep } = useRegistration();
@@ -30,7 +32,7 @@ export function Step2ProfessionalInfo() {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({
+  } = useForm<Step2ProfessionalInfoFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       professionalCadre: formData.professionalCadre,
@@ -41,7 +43,7 @@ export function Step2ProfessionalInfo() {
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: Step2ProfessionalInfoFormValues) => {
     // Check if terms are accepted
     if (!data.acceptedTerms) {
       toast.error('You must accept the terms and policy to register');
@@ -64,29 +66,9 @@ export function Step2ProfessionalInfo() {
         .filter(name => name && name.trim()) // Remove empty/null values
         .join(' ');
       
-      console.log('About to sign up user with the following data:', {
-        email: formData.email,
-        metadata: {
-          full_name: fullName,
-          first_name: formData.firstName,
-          middle_name: formData.middleName,
-          surname: formData.surname,
-          title: formData.title,
-          id_number: formData.idNumber,
-          country: formData.country,
-          professional_cadre: data.professionalCadre,
-          registration_number: data.registrationNumber,
-          professional_board: data.professionalBoard,
-          phone_number: formData.phoneNumber,
-          institution: data.institution,
-          accepted_terms: data.acceptedTerms,
-          role: 'user',
-        }
-      });
-      
       // Include all user metadata in the sign-up call
       // This will be available to the handle_new_user trigger function
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -110,8 +92,6 @@ export function Step2ProfessionalInfo() {
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
-      
-      console.log('Auth signup response:', authData);
       
       if (authError) {
         toast.dismiss(loadingToast);

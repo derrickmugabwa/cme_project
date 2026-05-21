@@ -407,8 +407,8 @@ export default function WebinarQuestions({ sessionId, userRole, isEnrolled, user
                     </Button>
                   )}
 
-                  {/* Change answer button */}
-                  {isAnswered && (
+                  {/* Change answer button — only for free text, MCQ is immutable */}
+                  {isAnswered && !isMcq && (
                     <Button
                       size="sm"
                       variant="outline"

@@ -21,79 +21,57 @@ interface CtaSectionProps {
 
 export const CtaSection = ({ data }: CtaSectionProps) => {
   return (
-    <section className="py-20 relative overflow-hidden">
-      {/* Background gradient or image */}
-      {data.background_image_url ? (
-        <div 
-          className="absolute inset-0 bg-cover bg-center" 
-          style={{ backgroundImage: `url(${data.background_image_url})` }}
-        >
-          <div className="absolute inset-0 bg-emerald-900/70" /> {/* Overlay for readability */}
-        </div>
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600" />
-      )}
-      
-      {/* Animated background shapes */}
-      <motion.div 
-        className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/10 blur-3xl"
-        animate={{ 
-          x: [0, 20, 0], 
-          y: [0, 30, 0],
-        }}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 12,
-          ease: "easeInOut" 
-        }}
-      />
-      <motion.div 
-        className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-white/10 blur-3xl"
-        animate={{ 
-          x: [0, -20, 0], 
-          y: [0, -30, 0],
-        }}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 10,
-          ease: "easeInOut" 
-        }}
-      />
-      
-      <div className="container relative mx-auto px-6 z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2 
-            initial={{ opacity: 0, y: -20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-bold mb-6 text-white"
-          >
-            {data.title}
-          </motion.h2>
-          
-          <motion.p 
+    <section className="py-24 bg-[#008C45] relative overflow-hidden">
+      {/* Subtle geometric accent — top-right corner block */}
+      <div className="absolute top-0 right-0 w-72 h-72 border-[40px] border-white/5 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 border-[28px] border-white/5 rounded-full -translate-x-1/2 translate-y-1/3 pointer-events-none" />
+
+      <div className="container relative mx-auto px-6 lg:px-12 z-10">
+        <div className="max-w-3xl">
+          <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg text-white/80 mb-10 max-w-2xl mx-auto"
+            transition={{ duration: 0.5 }}
+            className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4"
+          >
+            Get Started Today
+          </motion.p>
+
+          <motion.h2
+            initial={{ opacity: 0, y: -16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-5"
+          >
+            {data.title}
+          </motion.h2>
+
+          <div className="w-10 h-[3px] bg-white/40 rounded-full mb-7" />
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-base md:text-lg text-white/75 max-w-xl leading-relaxed mb-10"
           >
             {data.subtitle}
           </motion.p>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-3"
           >
             <Link href={data.primary_button_url} passHref>
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 rounded-lg bg-white text-emerald-600 font-medium shadow-lg shadow-emerald-700/25 hover:shadow-emerald-700/40 transition-all"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-8 py-3.5 rounded-md bg-white text-[#008C45] font-semibold text-sm shadow-md hover:bg-gray-50 transition-colors"
               >
                 {data.primary_button_text}
               </motion.button>
@@ -101,26 +79,26 @@ export const CtaSection = ({ data }: CtaSectionProps) => {
             {data.secondary_button_text && data.secondary_button_url && (
               <Link href={data.secondary_button_url} passHref>
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-8 py-4 rounded-lg border border-white/30 text-white font-medium hover:bg-white/10 transition-all"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="px-8 py-3.5 rounded-md border border-white/40 text-white font-semibold text-sm hover:bg-white/10 transition-colors"
                 >
                   {data.secondary_button_text}
                 </motion.button>
               </Link>
             )}
           </motion.div>
-          
+
           {data.additional_notes && (
-            <motion.div 
+            <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="mt-8 text-white/70 text-sm"
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="mt-6 text-xs text-white/50"
             >
               {data.additional_notes}
-            </motion.div>
+            </motion.p>
           )}
         </div>
       </div>

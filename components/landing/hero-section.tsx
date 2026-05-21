@@ -20,92 +20,65 @@ interface HeroSectionProps {
 
 export const HeroSection = ({ data }: HeroSectionProps) => {
   return (
-    <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
-      {/* Modern multi-stop gradient background - Static for better performance */}
-      <div className="absolute inset-0 bg-gradient-to-br from-mint-50 via-emerald-100 to-teal-200" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-teal-100/80 via-mint-200/60 to-emerald-50/90" />
-      <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-mint-100/40 to-teal-300/30" />
-      
-      {/* Simplified static decorative elements - Desktop only */}
-      <div className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none">
-        {/* Static wave shapes - no animation */}
-        <div className="absolute -top-32 -right-64 w-[800px] h-[600px] opacity-10">
-          <svg viewBox="0 0 800 600" className="w-full h-full">
-            <defs>
-              <linearGradient id="waveGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                <stop offset="50%" stopColor="#14b8a6" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="#0d9488" stopOpacity="0.1" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0,300 Q200,200 400,300 T800,300 L800,600 L0,600 Z"
-              fill="url(#waveGradient1)"
-            />
-          </svg>
-        </div>
-        
-        <div className="absolute -bottom-32 -left-64 w-[700px] h-[500px] opacity-8">
-          <svg viewBox="0 0 700 500" className="w-full h-full">
-            <defs>
-              <linearGradient id="waveGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0d9488" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="#14b8a6" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.2" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0,0 L0,200 Q175,100 350,200 T700,200 L700,0 Z"
-              fill="url(#waveGradient2)"
-            />
-          </svg>
-        </div>
-        
-        {/* Simple static geometric shapes */}
-        <div className="absolute top-20 left-1/4 w-24 h-24 opacity-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl transform rotate-45" />
-        <div className="absolute bottom-1/4 right-1/3 w-16 h-16 opacity-6 bg-gradient-to-tr from-teal-400 to-cyan-500 rounded-full" />
-      </div>
+    <section className="relative bg-white pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
+      {/* Solid left accent column */}
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#008C45]" />
 
-      <div className="container relative mx-auto px-6 z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          {/* Hero content */}
+      {/* Subtle dot-grid texture */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.035]"
+        style={{
+          backgroundImage: "radial-gradient(#008C45 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+
+      <div className="container relative mx-auto px-6 lg:px-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+          {/* Left – copy */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex flex-col gap-6"
+            transition={{ duration: 0.7 }}
+            className="flex flex-col gap-7"
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-sm text-green-600 dark:bg-green-900/30 dark:text-green-300">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              <span className="text-green-600 italic">Continuing Medical Education Platform</span>
+            {/* Tag */}
+            <div className="inline-flex items-center gap-2 w-fit border border-[#008C45]/30 rounded-full px-4 py-1.5 text-xs font-medium text-[#008C45] bg-[#008C45]/5 tracking-wide uppercase">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#008C45] animate-pulse" />
+              Continuing Medical Education Platform
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-black">
-              {data.title.split(' ').map((word, index) => {
-                if (word.toLowerCase() === 'medical' || word.toLowerCase() === 'education') {
-                  return (
-                    <span key={index} className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      {word}{' '}
-                    </span>
-                  );
-                }
-                return <span key={index}>{word} </span>;
+
+            {/* Headline */}
+            <h1 className="text-5xl md:text-6xl lg:text-[4.5rem] font-bold leading-[1.08] tracking-tight text-gray-900">
+              {data.title.split(" ").map((word, index) => {
+                const accent = ["medical", "education"].includes(
+                  word.toLowerCase()
+                );
+                return (
+                  <span
+                    key={index}
+                    className={accent ? "text-[#008C45]" : ""}
+                  >
+                    {word}{" "}
+                  </span>
+                );
               })}
             </h1>
-            
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-lg">
+
+            {/* Accent rule */}
+            <div className="w-14 h-[3px] bg-[#008C45] rounded-full" />
+
+            <p className="text-base md:text-lg text-gray-500 max-w-[480px] leading-relaxed">
               {data.subtitle}
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-2">
               <Link href={data.primary_button_url} passHref>
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="px-7 py-3 rounded-md bg-[#008C45] text-white text-sm font-semibold shadow-md shadow-[#008C45]/25 hover:bg-[#006E36] transition-colors"
                 >
                   {data.primary_button_text}
                 </motion.button>
@@ -113,9 +86,9 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
               {data.secondary_button_text && data.secondary_button_url && (
                 <Link href={data.secondary_button_url} passHref>
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-6 py-3 rounded-lg bg-white text-gray-800 font-medium border border-white hover:bg-gray-50 transition-all shadow-lg"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="px-7 py-3 rounded-md border border-gray-300 text-gray-700 text-sm font-semibold hover:border-[#008C45] hover:text-[#008C45] transition-colors bg-white"
                   >
                     {data.secondary_button_text}
                   </motion.button>
@@ -123,72 +96,64 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
               )}
             </div>
           </motion.div>
-          
-          {/* Hero image */}
+
+          {/* Right – image panel */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            initial={{ opacity: 0, x: 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
             className="relative"
           >
-            {/* Spotlight glow effect behind image */}
-            <div className="absolute inset-0 -m-8">
-              <div className="absolute inset-0 bg-gradient-radial from-emerald-200/40 via-teal-100/30 to-transparent rounded-full blur-3xl transform scale-110"></div>
-              <div className="absolute inset-0 bg-gradient-radial from-mint-300/30 via-emerald-200/20 to-transparent rounded-full blur-2xl transform scale-125"></div>
+            {/* Frame */}
+            <div className="relative h-[400px] md:h-[460px] w-full rounded-2xl overflow-hidden border border-gray-200 shadow-xl shadow-gray-200/80">
+              <Image
+                src={data.image_url || "/images/hero-dashboard.png"}
+                alt="CME Platform Dashboard"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                priority
+              />
+              {/* Thin green top bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-[#008C45]" />
             </div>
-            
-            <div className="relative h-[400px] w-full">
-              {/* Subtle backdrop with premium styling */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-teal-500/15 rounded-2xl transform rotate-1 backdrop-blur-sm"></div>
-              <div className="absolute inset-0 bg-white/95 dark:bg-gray-800/95 rounded-2xl shadow-2xl shadow-emerald-500/10 overflow-hidden backdrop-blur-sm border border-white/20">
-                <Image
-                  src={data.image_url || "/images/hero-dashboard.png"}
-                  alt="CME Platform Dashboard"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover"
-                  priority
-                />
-                {/* Subtle overlay for premium look */}
-                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/5"></div>
-              </div>
-            </div>
-            
-            {/* Floating badges */}
-            <motion.div 
-              className="absolute -top-6 -right-6 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg"
-              initial={{ y: 20, opacity: 0 }}
+
+            {/* Floating badge — certificate */}
+            <motion.div
+              className="absolute -top-5 -right-5 bg-white border border-gray-100 shadow-lg rounded-xl px-4 py-3"
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
+              transition={{ delay: 0.55, duration: 0.5 }}
             >
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-[#008C45]/10 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#008C45]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Certificate Earned</p>
-                  <p className="text-sm font-medium">Medical Ethics</p>
+                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Certificate Earned</p>
+                  <p className="text-sm font-semibold text-gray-800">Medical Ethics</p>
                 </div>
               </div>
             </motion.div>
-            
-            <motion.div 
-              className="absolute -bottom-6 -left-6 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg"
-              initial={{ y: 20, opacity: 0 }}
+
+            {/* Floating badge — webinar */}
+            <motion.div
+              className="absolute -bottom-5 -left-5 bg-white border border-gray-100 shadow-lg rounded-xl px-4 py-3"
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
+              transition={{ delay: 0.75, duration: 0.5 }}
             >
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Upcoming Webinar</p>
-                  <p className="text-sm font-medium">In 2 hours</p>
+                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Upcoming Webinar</p>
+                  <p className="text-sm font-semibold text-gray-800">In 2 hours</p>
                 </div>
               </div>
             </motion.div>

@@ -225,7 +225,7 @@ export const Navbar = ({ logo }: NavbarProps) => {
                 </Link>
                 <Link
                   href="/auth/sign-up"
-                  className="px-4 py-2 rounded-lg text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium"
+                  className="px-4 py-2 rounded-lg text-center bg-[#008C45] text-white font-medium hover:bg-[#006E36] transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sign Up

@@ -141,9 +141,10 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`
       const filePath = `${userId}/${fileName}`
       
+      const mimeType = file.type || 'application/octet-stream'
       const { error: uploadError } = await supabase.storage
         .from('content')
-        .upload(filePath, file)
+        .upload(filePath, file, { contentType: mimeType, upsert: true })
       
       if (uploadError) {
         throw new Error(`Error uploading file: ${uploadError.message}`)
@@ -222,9 +223,10 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`
       const filePath = `${userId}/${fileName}`
       
+      const mimeType = file.type || 'application/octet-stream'
       const { error: uploadError } = await supabase.storage
         .from('content')
-        .upload(filePath, file)
+        .upload(filePath, file, { contentType: mimeType, upsert: true })
       
       if (uploadError) {
         throw new Error(`Error uploading file: ${uploadError.message}`)

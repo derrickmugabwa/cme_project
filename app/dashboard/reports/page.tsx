@@ -29,6 +29,12 @@ import { DateRange } from "react-day-picker";
 import { generateEnrollmentReport } from "@/components/reports/enrollment-report";
 import { generateWebinarReport } from "@/components/reports/webinar-report";
 import { generatePlaceholderReport } from "@/components/reports/placeholder-report";
+import {
+  generateWebinarCompletionReport,
+  generateCertificateIssuanceReport,
+  generateRevenueAnalysisReport,
+  generateActivityTimelineReport,
+} from "@/components/reports/additional-reports";
 import { reports, Report } from "@/components/reports/report-registry";
 
 export default function ReportsPage() {
@@ -75,35 +81,64 @@ export default function ReportsPage() {
     
     try {
       switch (selectedReport.id) {
-        case "webinar-attendees": {
+        case "webinar-attendees":
           await generateWebinarReport({
             dateRange: getDateRange(),
             onSuccess: () => setIsDialogOpen(false),
             onError: (error: any) => console.error(error),
-            toast: { toast }
+            toast: { toast },
           });
           break;
-        }
-        case "enrollment-summary": {
+        case "enrollment-summary":
           await generateEnrollmentReport({
             dateRange: getDateRange(),
             onSuccess: () => setIsDialogOpen(false),
             onError: (error: any) => console.error(error),
-            toast: { toast }
+            toast: { toast },
           });
           break;
-        }
-        default: {
+        case "webinar-completion":
+          await generateWebinarCompletionReport({
+            dateRange: getDateRange(),
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error: any) => console.error(error),
+            toast: { toast },
+          });
+          break;
+        case "certificate-issuance":
+          await generateCertificateIssuanceReport({
+            dateRange: getDateRange(),
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error: any) => console.error(error),
+            toast: { toast },
+          });
+          break;
+        case "revenue-analysis":
+          await generateRevenueAnalysisReport({
+            dateRange: getDateRange(),
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error: any) => console.error(error),
+            toast: { toast },
+          });
+          break;
+        case "activity-timeline":
+          await generateActivityTimelineReport({
+            dateRange: getDateRange(),
+            onSuccess: () => setIsDialogOpen(false),
+            onError: (error: any) => console.error(error),
+            toast: { toast },
+          });
+          break;
+        default:
           await generatePlaceholderReport({
             reportId: selectedReport.id,
             reportName: selectedReport.name,
             dateRange: getDateRange(),
             onSuccess: () => setIsDialogOpen(false),
             onError: (error: any) => console.error(error),
-            toast: { toast }
+            toast: { toast },
           });
           break;
-        }
       }
     } finally {
       setIsGenerating(false);

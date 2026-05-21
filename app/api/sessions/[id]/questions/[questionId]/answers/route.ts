@@ -87,7 +87,29 @@ export async function POST(
     );
   }
 
-  // Upsert: update if exists, insert if not
+  // Check question type — MCQ answers cannot be changed once submitted
+  const { data: question } = await supabase
+    .from('session_questions')
+    .select('question_type')
+    .eq('id', questionId)
+    .single();
+
+  // Check if answer already exists for this user + question
+  const { data: existingAnswer } = await supabase
+    .from('session_question_answers')
+    .select('id')
+    .eq('question_id', questionId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existingAnswer && question?.question_type === 'multiple_choice') {
+    return NextResponse.json(
+      { error: 'Multiple choice answers cannot be changed once submitted.' },
+      { status: 403 }
+    );
+  }
+
+  // Upsert: update if exists, insert if not (blocked above for MCQ)
   const { data: answer, error } = await supabase
     .from('session_question_answers')
     .upsert(

@@ -10,9 +10,6 @@ export function ProfileSidebar({ activeTab, userRole }: ProfileSidebarProps) {
   const tabs = [
     { id: 'profile', label: 'Profile', href: '/dashboard/profile', roles: ['user', 'faculty', 'admin'] },
     { id: 'account', label: 'Account', href: '/dashboard/profile/account', roles: ['user', 'faculty', 'admin'] },
-    { id: 'appearance', label: 'Appearance', href: '/dashboard/profile/appearance', roles: ['user', 'faculty', 'admin'] },
-    { id: 'notifications', label: 'Notifications', href: '/dashboard/profile/notifications', roles: ['user', 'faculty', 'admin'] },
-    { id: 'display', label: 'Display', href: '/dashboard/profile/display', roles: ['user', 'faculty', 'admin'] },
   ]
 
   const filteredTabs = tabs.filter(tab => tab.roles.includes(userRole))
@@ -27,7 +24,7 @@ export function ProfileSidebar({ activeTab, userRole }: ProfileSidebarProps) {
             className={cn(
               "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
               activeTab === tab.id
-                ? "bg-purple-100 text-purple-900 hover:bg-purple-200"
+                ? "bg-green-50 text-[#008C45] hover:bg-green-100"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >

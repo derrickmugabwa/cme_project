@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { LogoProvider } from "@/contexts/logo-context";
-import { fetchLogo } from "@/lib/logo-service";
+import { fetchLogo, fetchFavicon } from "@/lib/logo-service";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,10 +16,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "CME Platform",
-  description: "Continuing Medical Education Platform for Healthcare Professionals",
-};
+// Dynamic metadata so the favicon from the database is injected into <head> on every request
+export async function generateMetadata(): Promise<Metadata> {
+  const favicon = await fetchFavicon();
+
+  return {
+    title: "CME Platform",
+    description: "Continuing Medical Education Platform for Healthcare Professionals",
+    icons: favicon?.url
+      ? {
+          icon: [{ url: favicon.url }],
+          apple: [{ url: favicon.url }],
+        }
+      : {
+          icon: [{ url: "/favicon.ico" }],
+        },
+  };
+}
 
 export default async function RootLayout({
   children,

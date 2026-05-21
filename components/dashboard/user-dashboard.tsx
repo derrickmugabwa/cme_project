@@ -164,14 +164,14 @@ export function UserDashboard({ profile, user }: UserDashboardProps) {
         setLoading(true);
         const supabase = createClient();
         
-        // Fetch user units
+        // Fetch user units (maybeSingle returns null instead of 406 when no row exists)
         const { data: unitsData, error: unitsError } = await supabase
           .from('user_units')
           .select('units')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
-        if (unitsError && unitsError.code !== 'PGRST116') {
+        if (unitsError) {
           console.error('Error fetching user units:', unitsError);
         } else {
           setUserUnits(unitsData?.units || 0);

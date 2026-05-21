@@ -61,3 +61,36 @@ export async function fetchLogoClient(): Promise<Logo | null> {
     return null;
   }
 }
+
+export interface Favicon {
+  id: string;
+  url: string;
+  alt_text: string;
+  updated_at: string;
+}
+
+/**
+ * Server-side favicon fetching service
+ * Reads from site_favicon table so the layout can inject it into <head> on every request.
+ */
+export async function fetchFavicon(): Promise<Favicon | null> {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data, error } = await supabase
+      .from('site_favicon')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching favicon:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching favicon:', error);
+    return null;
+  }
+}
