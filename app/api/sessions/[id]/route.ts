@@ -48,8 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .eq('id', user.id)
       .single();
     
-    // Check if user is admin or instructor
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'instructor')) {
+    if (!profile || profile.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     
@@ -60,10 +59,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .eq('id', id)
       .single();
     
+    if (sessionError || !existingSession) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
     // Check permissions
-    if (!profile || 
-        (profile.role !== 'admin' && 
-         (profile.role !== 'faculty' || existingSession?.created_by !== user.id))) {
+    if (profile.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     
@@ -161,6 +162,22 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
          (profile.role !== 'faculty' || currentSession?.created_by !== user.id))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
+
+    const { count: enrollmentCount, error: enrollmentCountError } = await supabase
+      .from('session_enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('session_id', id);
+
+    if (enrollmentCountError) {
+      throw enrollmentCountError;
+    }
+
+    if ((enrollmentCount || 0) > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete a webinar that has enrollments' },
+        { status: 409 }
+      );
+    }
     
     // If session has a Teams meeting, cancel it
     if (currentSession?.teams_meeting_id) {
@@ -188,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       }
 
       // Check permissions: admin, faculty, or session creator
-      if (user.role !== 'admin' && user.role !== 'faculty' && sessionExists.created_by !== user.id) {
+      if (profile.role !== 'admin' && profile.role !== 'faculty' && sessionExists.created_by !== user.id) {
         return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
 

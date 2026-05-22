@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCertificatePdf } from '@/lib/certificates/pdf-generator';
 import { format } from 'date-fns';
+import { getAppBaseUrl } from '@/lib/app-url';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,8 @@ export async function POST(request: NextRequest) {
       // No body or invalid JSON, proceed with default template
     }
 
+    const baseUrl = getAppBaseUrl(request);
+
     // Generate sample certificate data
     const sampleData = {
       certificateNumber: 'SAMPLE-12345',
@@ -20,7 +23,7 @@ export async function POST(request: NextRequest) {
       sessionTitle: 'Advanced Medical Training',
       sessionDate: format(new Date(), 'yyyy-MM-dd'),
       issuedDate: format(new Date(), 'yyyy-MM-dd'),
-      verificationUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify/SAMPLE-12345`,
+      verificationUrl: `${baseUrl}/verify/SAMPLE-12345`,
       location: 'Nairobi, Kenya',
       standardReference: 'ISO 9001:2015',
       trainingType: 'Continuing Medical Education',

@@ -88,6 +88,22 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
     if (!sessionId) return; // Don't load data until we have the session ID
     async function loadSessionData() {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error('You must be signed in to edit webinars');
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.role !== 'admin') {
+          throw new Error('Only admins can edit webinars');
+        }
+
         // Fetch session details
         const { data: session, error: sessionError } = await supabase
           .from('sessions')
@@ -132,19 +148,13 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
         }
         
         // Check Microsoft auth status
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: msToken } = await supabase
+          .from('ms_graph_tokens')
+          .select('id')
+          .eq('profile_id', user.id)
+          .single();
         
-        if (user) {
-          const { data: msToken } = await supabase
-            .from('ms_graph_tokens')
-            .select('id')
-            .eq('profile_id', user.id)
-            .single();
-          
-          setHasMicrosoftAuth(!!msToken);
-        } else {
-          setHasMicrosoftAuth(false);
-        }
+        setHasMicrosoftAuth(!!msToken);
       } catch (error: any) {
         console.error('Error loading session data:', error);
         setError(error.message);
@@ -257,6 +267,23 @@ export default function EditSessionPage({ params }: { params: Promise<{ id: stri
   
   if (loading) {
     return <p>Loading session data...</p>;
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="bg-red-50 border-red-200 mb-4">
+          <AlertTitle>Unable to Edit Webinar</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button
+          variant="outline"
+          onClick={() => router.push(sessionId ? `/dashboard/sessions/${sessionId}` : '/dashboard/sessions')}
+        >
+          Back to Webinar
+        </Button>
+      </div>
+    );
   }
   
   return (

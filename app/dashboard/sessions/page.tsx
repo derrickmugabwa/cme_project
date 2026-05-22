@@ -73,7 +73,7 @@ export default function SessionsPage() {
       filtered = sessions.filter(session => {
         const endTime = new Date(session.end_time);
         return endTime < now;
-      });
+      }).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     }
     
     setFilteredSessions(filtered);

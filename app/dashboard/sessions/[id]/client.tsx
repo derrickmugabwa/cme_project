@@ -81,6 +81,10 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [enrollmentLoading, setEnrollmentLoading] = useState(true);
   const [enrolleesLoading, setEnrolleesLoading] = useState(true);
   const [authSession, setAuthSession] = useState<any>(null);
+  const hasEnrollments = enrollees.length > 0;
+  const canEditWebinar = currentUserRole === 'admin';
+  const canDeleteWebinar = currentUserRole && currentUserRole !== 'user';
+  const deleteDisabled = deleting || enrolleesLoading || hasEnrollments;
   
   // Function to fetch enrollment status
   const fetchEnrollmentStatus = async () => {
@@ -279,6 +283,15 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
 
   // Handle webinar deletion
   const handleDelete = async () => {
+    if (hasEnrollments) {
+      toast({
+        title: 'Cannot Delete Webinar',
+        description: 'This webinar has enrollments and cannot be deleted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!deleteConfirm) {
       setDeleteConfirm(true);
       return;
@@ -382,18 +395,19 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
           </button>
           <h1 className="text-2xl font-bold">Webinar Details</h1>
         </div>
-        <div className="flex space-x-2">
-          <Button
-            onClick={() => router.push(`/dashboard/sessions/${sessionId}/edit`)}
-            className="flex items-center space-x-1 bg-[#008C45] hover:bg-[#006633] text-white"
-         
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
-            <span>Edit</span>
-          </Button>
-        </div>
+        {canEditWebinar && (
+          <div className="flex space-x-2">
+            <Button
+              onClick={() => router.push(`/dashboard/sessions/${sessionId}/edit`)}
+              className="flex items-center space-x-1 bg-[#008C45] hover:bg-[#006633] text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              <span>Edit</span>
+            </Button>
+          </div>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -557,16 +571,21 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                 </span>
               </div>
               
-              {currentUserRole && currentUserRole !== 'user' && (
+              {canDeleteWebinar && (
                 <div className="mt-6 pt-4 border-t">
                   <Button
                     variant="destructive"
                     onClick={handleDelete}
-                    disabled={deleting}
+                    disabled={deleteDisabled}
                     className="w-full"
                   >
-                    {deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
+                    {hasEnrollments ? 'Delete Unavailable' : deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
                   </Button>
+                  {hasEnrollments && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      This webinar has enrolled attendees, so deletion is disabled.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -636,7 +655,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         <CardContent>
           <SessionMediaViewer 
             sessionId={sessionId}
-            canEdit={currentUserRole === 'admin' || (session && session.created_by === authSession?.user?.id)}
+            canEdit={canEditWebinar}
             userRole={currentUserRole || undefined}
           />
         </CardContent>

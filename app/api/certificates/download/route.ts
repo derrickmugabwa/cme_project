@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/server';
 import { generateCertificatePdf, formatCertificateData } from '@/lib/certificates/pdf-generator';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAppBaseUrl } from '@/lib/app-url';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Format certificate data
-    const baseUrl = new URL(request.url).origin;
+    const baseUrl = getAppBaseUrl(request);
     
     // Get session location if available
     const { data: sessionLocation } = await supabase
