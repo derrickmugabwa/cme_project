@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Coins, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown, Coins, Loader2, UserRound } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -19,13 +28,53 @@ interface Profile {
 
 export default function AdminUnitsManager() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [amount, setAmount] = useState<number>(0);
   const [notes, setNotes] = useState('');
+
+  const selectedUser = useMemo(
+    () => profiles.find(profile => profile.id === selectedUserId),
+    [profiles, selectedUserId]
+  );
+
+  const visibleProfiles = useMemo(() => {
+    const term = userSearchTerm.trim().toLowerCase();
+    const matchingProfiles = term
+      ? profiles.filter(profile => {
+          const searchableText = [
+            profile.full_name,
+            profile.email,
+            profile.id,
+          ].filter(Boolean).join(' ').toLowerCase();
+
+          return searchableText.includes(term);
+        })
+      : profiles;
+
+    return matchingProfiles.slice(0, 80);
+  }, [profiles, userSearchTerm]);
+
+  const matchingProfileCount = useMemo(() => {
+    const term = userSearchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return profiles.length;
+    }
+
+    return profiles.filter(profile => {
+      const searchableText = [
+        profile.full_name,
+        profile.email,
+        profile.id,
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return searchableText.includes(term);
+    }).length;
+  }, [profiles, userSearchTerm]);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -38,7 +87,6 @@ export default function AdminUnitsManager() {
         }
         const data = await response.json();
         setProfiles(data.profiles || []);
-        setFilteredProfiles(data.profiles || []);
       } catch (err) {
         console.error('Error fetching profiles:', err);
         toast({
@@ -53,20 +101,6 @@ export default function AdminUnitsManager() {
 
     fetchProfiles();
   }, []);
-
-  useEffect(() => {
-    // Filter profiles based on search term
-    if (searchTerm.trim() === '') {
-      setFilteredProfiles(profiles);
-    } else {
-      const term = searchTerm.toLowerCase();
-      const filtered = profiles.filter(profile => 
-        profile.full_name.toLowerCase().includes(term) || 
-        profile.email.toLowerCase().includes(term)
-      );
-      setFilteredProfiles(filtered);
-    }
-  }, [searchTerm, profiles]);
 
   const handleTopUp = async () => {
     if (!selectedUserId) {
@@ -137,6 +171,20 @@ export default function AdminUnitsManager() {
     }
   };
 
+  const getProfileName = (profile: Profile) => profile.full_name || profile.email || 'Unnamed user';
+
+  const getInitials = (profile: Profile) => {
+    const source = getProfileName(profile);
+    return source
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || 'U';
+  };
+
+  const formatUnits = (units?: number) => `${units ?? 0} Units`;
+
   return (
     <Card>
       <CardHeader>
@@ -150,51 +198,129 @@ export default function AdminUnitsManager() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="user-select">Select User</Label>
-            <Select
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              disabled={loading}
+            <Popover
+              open={userPickerOpen}
+              onOpenChange={(open) => {
+                setUserPickerOpen(open);
+                if (!open) {
+                  setUserSearchTerm('');
+                }
+              }}
             >
-              <SelectTrigger id="user-select">
-                <SelectValue placeholder="Select a user" />
-              </SelectTrigger>
-              <SelectContent>
-                {loading ? (
-                  <div className="flex items-center justify-center py-2">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading users...
-                  </div>
-                ) : filteredProfiles.length === 0 ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">
-                    No users found
-                  </div>
-                ) : (
-                  filteredProfiles.map(profile => (
-                    <SelectItem key={profile.id} value={profile.id}>
-                      <div className="flex justify-between w-full">
-                        <span>{profile.full_name}</span>
-                        <span className="text-muted-foreground">
-                          {profile.units !== undefined ? `${profile.units} Units` : 'No wallet'}
+              <PopoverTrigger asChild>
+                <Button
+                  id="user-select"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={userPickerOpen}
+                  disabled={loading}
+                  className="h-auto min-h-11 w-full justify-between gap-3 px-3 py-2 text-left font-normal"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading users...
+                    </span>
+                  ) : selectedUser ? (
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 text-sm font-semibold text-green-700">
+                        {getInitials(selectedUser)}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">
+                          {getProfileName(selectedUser)}
                         </span>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {selectedUser.email}
+                        </span>
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="flex min-w-0 items-center gap-3 text-muted-foreground">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <UserRound className="h-4 w-4" />
+                      </span>
+                      Search by name or email
+                    </span>
+                  )}
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Search users by name or email..."
+                    value={userSearchTerm}
+                    onValueChange={setUserSearchTerm}
+                    className="h-11"
+                  />
+                  <CommandList className="max-h-80">
+                    {matchingProfileCount === 0 ? (
+                      <CommandEmpty>No matching users found.</CommandEmpty>
+                    ) : (
+                      <CommandGroup
+                        heading={
+                          matchingProfileCount > visibleProfiles.length
+                            ? `Showing ${visibleProfiles.length} of ${matchingProfileCount} users`
+                            : `${matchingProfileCount} users`
+                        }
+                      >
+                        {visibleProfiles.map(profile => (
+                        <CommandItem
+                          key={profile.id}
+                          value={`${getProfileName(profile)} ${profile.email} ${profile.id}`}
+                          onSelect={() => {
+                            setSelectedUserId(profile.id);
+                            setUserPickerOpen(false);
+                          }}
+                          className="items-start gap-3 py-3"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 text-sm font-semibold text-green-700">
+                            {getInitials(profile)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{getProfileName(profile)}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{profile.email}</span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <Badge variant="secondary" className="font-normal">
+                              {formatUnits(profile.units)}
+                            </Badge>
+                            <Check
+                              className={`h-4 w-4 ${selectedUserId === profile.id ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                          </span>
+                        </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
+
+          {selectedUser && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-sm font-semibold text-green-700">
+                    {getInitials(selectedUser)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{getProfileName(selectedUser)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="shrink-0">
+                  {formatUnits(selectedUser.units)}
+                </Badge>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="amount">Amount to Add</Label>

@@ -1,39 +1,13 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createClient } from "@/lib/client";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { DateRange } from "react-day-picker";
 import { type ToastActionElement } from "@/components/ui/toast";
-
-// Define types for the report data
-interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  phone_number: string;
-  institution: string;
-  country: string;
-  professional_cadre: string;
-  role: string;
-}
-
-interface WebinarAttendee {
-  participant_id: string;
-  full_name: string;
-  email: string;
-  phone_number: string;
-  organization: string;
-  country: string;
-  profession: string;
-  webinar_title: string;
-  registration_date: string;
-  payment_status: string;
-  amount_paid: number;
-  mode_of_payment: string;
-  attended: boolean;
-}
 
 type ToastProps = {
   title?: string;
@@ -75,7 +49,7 @@ export async function generateWebinarReport({
         session_id,
         status,
         units_spent,
-        profiles:user_id(id, full_name, email, phone_number, institution, country, professional_cadre, role),
+        profiles:user_id(id, full_name, email, registration_number, id_number, phone_number, institution, country, professional_cadre, role),
         sessions:session_id(id, title)
       `)
       .gte('created_at', fromDate)
@@ -121,6 +95,8 @@ export async function generateWebinarReport({
       'Participant ID': `P${(index + 1).toString().padStart(3, '0')}`,
       'Full Name': enrollment.profiles?.full_name || 'N/A',
       'Email Address': enrollment.profiles?.email || 'N/A',
+      'Registration Number': enrollment.profiles?.registration_number || 'N/A',
+      'National ID Number': enrollment.profiles?.id_number || 'N/A',
       'Phone Number': enrollment.profiles?.phone_number || 'N/A',
       'Organization': enrollment.profiles?.institution || 'N/A',
       'Country': enrollment.profiles?.country || 'N/A',

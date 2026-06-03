@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createClient } from "@/lib/client";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
@@ -118,7 +120,7 @@ export async function generateCertificateIssuanceReport({
         issued_at,
         user_id,
         session_id,
-        profiles:user_id(full_name, email, institution, professional_cadre),
+        profiles:user_id(full_name, email, registration_number, id_number, institution, professional_cadre),
         sessions:session_id(title, start_time)
       `)
       .gte('issued_at', fromDate)
@@ -133,6 +135,8 @@ export async function generateCertificateIssuanceReport({
       'Issued Date':          row.issued_at ? format(new Date(row.issued_at), 'yyyy-MM-dd HH:mm') : 'N/A',
       'Participant Name':     row.profiles?.full_name || 'N/A',
       'Email':                row.profiles?.email || 'N/A',
+      'Registration Number':  row.profiles?.registration_number || 'N/A',
+      'National ID Number':   row.profiles?.id_number || 'N/A',
       'Institution':          row.profiles?.institution || 'N/A',
       'Profession':           row.profiles?.professional_cadre || 'N/A',
       'Webinar Title':        row.sessions?.title || 'N/A',

@@ -7,40 +7,75 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CountryCombobox } from '@/components/ui/country-combobox'
 
 // Custom Input with rounded corners
 const StyledInput = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
-  <Input className={`rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 ${className || ''}`} {...props} />
+  <Input className={`rounded-xl border-gray-300 focus:border-green-600 focus:ring-green-600 ${className || ''}`} {...props} />
 )
 
 // Custom Textarea with rounded corners
 const StyledTextarea = ({ className, ...props }: React.ComponentProps<typeof Textarea>) => (
-  <Textarea className={`rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 ${className || ''}`} {...props} />
+  <Textarea className={`rounded-xl border-gray-300 focus:border-green-600 focus:ring-green-600 ${className || ''}`} {...props} />
 )
 
 // Custom Button with rounded corners
 const PrimaryButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
-  <Button className={`bg-purple-600 hover:bg-purple-700 text-white rounded-xl ${className || ''}`} {...props} />
+  <Button className={`bg-green-600 hover:bg-green-700 text-white rounded-xl ${className || ''}`} {...props} />
 )
 
+interface ProfileData {
+  id: string
+  email?: string | null
+  full_name?: string | null
+  first_name?: string | null
+  middle_name?: string | null
+  surname?: string | null
+  bio?: string | null
+  title?: string | null
+  id_number?: string | null
+  country?: string | null
+  phone_number?: string | null
+  professional_cadre?: string | null
+  registration_number?: string | null
+  professional_board?: string | null
+  institution?: string | null
+  accepted_terms?: boolean | null
+  role?: string | null
+}
+
 interface ProfileFormProps {
-  profile: any
+  profile: ProfileData
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
+  const fullNameParts = (profile.full_name || '').trim().split(/\s+/).filter(Boolean)
+  const fallbackFirstName = fullNameParts[0] || ''
+  const fallbackMiddleName = fullNameParts.length > 2 ? fullNameParts.slice(1, -1).join(' ') : ''
+  const fallbackSurname = fullNameParts.length > 1 ? fullNameParts[fullNameParts.length - 1] : ''
+
+  const [firstName, setFirstName] = useState(profile.first_name || fallbackFirstName)
+  const [middleName, setMiddleName] = useState(profile.middle_name || fallbackMiddleName)
+  const [surname, setSurname] = useState(profile.surname || fallbackSurname)
   const [fullName, setFullName] = useState(profile.full_name || '')
   const [bio, setBio] = useState(profile.bio || '')
   const [title, setTitle] = useState(profile.title || '')
+  const [idNumber, setIdNumber] = useState(profile.id_number || '')
   const [country, setCountry] = useState(profile.country || '')
   const [phoneNumber, setPhoneNumber] = useState(profile.phone_number || '')
   const [professionalCadre, setProfessionalCadre] = useState(profile.professional_cadre || '')
   const [registrationNumber, setRegistrationNumber] = useState(profile.registration_number || '')
   const [professionalBoard, setProfessionalBoard] = useState(profile.professional_board || '')
   const [institution, setInstitution] = useState(profile.institution || '')
+  const [acceptedTerms, setAcceptedTerms] = useState(Boolean(profile.accepted_terms))
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedEmail, setSelectedEmail] = useState<string>(profile.email || '')
-  const [role, setRole] = useState<string>(profile.role || 'user')
+  const role = profile.role || 'user'
+  const generatedFullName = [firstName, middleName, surname]
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .join(' ')
   
   // No URL handlers needed
   
@@ -54,15 +89,20 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName,
+          first_name: firstName.trim(),
+          middle_name: middleName.trim() || null,
+          surname: surname.trim(),
+          full_name: generatedFullName || fullName.trim(),
           bio,
           title,
+          id_number: idNumber.trim(),
           country,
-          phone_number: phoneNumber,
-          professional_cadre: professionalCadre,
-          registration_number: registrationNumber,
-          professional_board: professionalBoard,
-          institution,
+          phone_number: phoneNumber.trim(),
+          professional_cadre: professionalCadre.trim(),
+          registration_number: registrationNumber.trim(),
+          professional_board: professionalBoard.trim(),
+          institution: institution.trim(),
+          accepted_terms: acceptedTerms,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profile.id)
@@ -73,10 +113,10 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update profile",
+        description: error instanceof Error ? error.message : "Failed to update profile",
         variant: "destructive",
       })
     } finally {
@@ -93,25 +133,77 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="title" className="mb-2 block">Title</Label>
+              <Select value={title} onValueChange={setTitle}>
+                <SelectTrigger id="title" className="rounded-xl border-gray-300">
+                  <SelectValue placeholder="Select a title" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dr">Dr.</SelectItem>
+                  <SelectItem value="Prof">Prof.</SelectItem>
+                  <SelectItem value="Mr">Mr.</SelectItem>
+                  <SelectItem value="Mrs">Mrs.</SelectItem>
+                  <SelectItem value="Ms">Ms.</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="firstName" className="mb-2 block">First Name</Label>
+              <StyledInput
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="John"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <Label htmlFor="middleName" className="mb-2 block">Middle Name (Optional)</Label>
+              <StyledInput
+                id="middleName"
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+                placeholder="Middle name"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="surname" className="mb-2 block">Surname</Label>
+              <StyledInput
+                id="surname"
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
               <Label htmlFor="fullName" className="mb-2 block">Full Name</Label>
               <StyledInput
                 id="fullName"
-                value={fullName}
+                value={generatedFullName || fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Doe"
+                className="bg-gray-50"
+                disabled={Boolean(generatedFullName)}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Your full name as it appears on official documents.
+                Automatically built from your name fields.
               </p>
             </div>
             
             <div>
-              <Label htmlFor="title" className="mb-2 block">Title</Label>
+              <Label htmlFor="idNumber" className="mb-2 block">ID Number</Label>
               <StyledInput
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Dr., Prof., Mr., Mrs., etc."
+                id="idNumber"
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                placeholder="Enter your national ID number"
               />
             </div>
           </div>
@@ -119,11 +211,11 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <Label htmlFor="country" className="mb-2 block">Country</Label>
-              <StyledInput
-                id="country"
+              <CountryCombobox
                 value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="Kenya, Uganda, etc."
+                onValueChange={setCountry}
+                placeholder="Search and select your country..."
+                className="rounded-xl border-gray-300"
               />
             </div>
             
@@ -133,7 +225,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 id="phoneNumber"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+254 700 000000"
+                placeholder="+254 XXX XXX XXX"
               />
             </div>
           </div>
@@ -143,7 +235,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               <Label htmlFor="email" className="mb-2 block">Email</Label>
               <StyledInput
                 id="email"
-                value={profile.email}
+                value={profile.email || ''}
                 disabled
                 className="bg-gray-50"
               />
@@ -151,6 +243,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 Your email address is used for account recovery and notifications.
               </p>
             </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 mt-4">
+            <Checkbox
+              id="acceptedTerms"
+              checked={acceptedTerms}
+              onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+              disabled={profile.accepted_terms === true}
+            />
+            <Label htmlFor="acceptedTerms" className="text-sm font-medium leading-none">
+              Accepted terms and privacy policy
+            </Label>
           </div>
         </div>
         
@@ -192,7 +296,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </div>
             
             <div>
-              <Label htmlFor="institution" className="mb-2 block">Institution</Label>
+              <Label htmlFor="institution" className="mb-2 block">Institution of Work</Label>
               <StyledInput
                 id="institution"
                 value={institution}

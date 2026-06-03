@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Search, Coins, Edit2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, Coins, Edit2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SessionUnitRequirementManager from '@/components/units/SessionUnitRequirementManager';
 
 interface Session {
@@ -19,11 +19,20 @@ interface Session {
 
 export default function SessionUnitRequirementsList() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const filteredSessions = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return sessions;
+    }
+
+    return sessions.filter(session => session.title.toLowerCase().includes(term));
+  }, [searchTerm, sessions]);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -36,7 +45,6 @@ export default function SessionUnitRequirementsList() {
         }
         const data = await response.json();
         setSessions(data.sessions || []);
-        setFilteredSessions(data.sessions || []);
       } catch (err) {
         console.error('Error fetching sessions:', err);
       } finally {
@@ -46,19 +54,6 @@ export default function SessionUnitRequirementsList() {
 
     fetchSessions();
   }, []);
-
-  useEffect(() => {
-    // Filter sessions based on search term
-    if (searchTerm.trim() === '') {
-      setFilteredSessions(sessions);
-    } else {
-      const term = searchTerm.toLowerCase();
-      const filtered = sessions.filter(session => 
-        session.title.toLowerCase().includes(term)
-      );
-      setFilteredSessions(filtered);
-    }
-  }, [searchTerm, sessions]);
 
   const handleEditRequirement = (session: Session) => {
     setSelectedSession(session);
@@ -153,6 +148,9 @@ export default function SessionUnitRequirementsList() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Unit Requirement</DialogTitle>
+            <DialogDescription>
+              Update the number of units required for {selectedSession?.title || 'this session'}.
+            </DialogDescription>
           </DialogHeader>
           {selectedSession && (
             <SessionUnitRequirementManager 
