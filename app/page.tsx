@@ -9,8 +9,10 @@ import {
   FooterSection,
   Navbar
 } from "@/components/landing";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { fetchFooterData } from "@/lib/footer-service";
+
+// Keep testimonials available in code/admin, but hide the landing section for now.
+const SHOW_TESTIMONIALS_SECTION = false;
 
 // Define component prop interfaces for landing page sections
 interface HeroSectionProps {
@@ -86,26 +88,6 @@ interface FooterSectionProps {
   seo_keywords: string[] | null;
 }
 
-// Database schema types
-interface DbHeroContent {
-  id: string;
-  title: string;
-  subtitle: string;
-  cta_primary_text: string;
-  cta_primary_url?: string;
-  cta_secondary_text: string;
-  cta_secondary_url?: string;
-  image_url?: string;
-}
-
-interface DbFeature {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  order_index: number;
-}
-
 interface DbTestimonial {
   id: string;
   name: string;
@@ -123,38 +105,6 @@ interface DbStat {
   value: string;
   icon: string;
   order_index: number;
-}
-
-interface DbCtaContent {
-  id: string;
-  title: string;
-  description: string;
-  button_primary_text: string;
-  button_primary_url?: string;
-  button_secondary_text: string;
-  button_secondary_url?: string;
-  background_image_url?: string;
-}
-
-interface DbLandingSettings {
-  id: string;
-  site_title: string;
-  meta_description: string;
-  site_description?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  social_links?: {
-    facebook?: string;
-    twitter?: string;
-    instagram?: string;
-    linkedin?: string;
-  };
-  show_hero?: boolean;
-  show_features?: boolean;
-  show_testimonials?: boolean;
-  show_stats?: boolean;
-  show_cta?: boolean;
-  footer_text?: string;
 }
 
 // Generate metadata for the page
@@ -215,11 +165,11 @@ async function fetchLandingData() {
   
   const cta = ctaResult.data ? {
     ...ctaResult.data,
-    subtitle: ctaResult.data.description,
-    primary_button_text: ctaResult.data.button_primary_text,
-    primary_button_url: ctaResult.data.button_primary_url || '/auth/sign-up',
-    secondary_button_text: ctaResult.data.button_secondary_text,
-    secondary_button_url: ctaResult.data.button_secondary_url || '/contact',
+    subtitle: ctaResult.data.subtitle || ctaResult.data.description,
+    primary_button_text: ctaResult.data.primary_button_text || ctaResult.data.button_primary_text,
+    primary_button_url: ctaResult.data.primary_button_url || ctaResult.data.button_primary_url || '/auth/sign-up',
+    secondary_button_text: ctaResult.data.secondary_button_text || ctaResult.data.button_secondary_text,
+    secondary_button_url: ctaResult.data.secondary_button_url || ctaResult.data.button_secondary_url || '/contact',
     additional_notes: null
   } : null;
   
@@ -286,7 +236,9 @@ export default async function Home() {
       {settings?.show_hero !== false && hero && <HeroSection data={hero} />}
       {settings?.show_stats !== false && stats && <StatsSection data={stats} />}
       {settings?.show_features !== false && features && <FeaturesSection data={features} />}
-      {settings?.show_testimonials !== false && testimonials && <TestimonialsSection data={testimonials} />}
+      {SHOW_TESTIMONIALS_SECTION && settings?.show_testimonials !== false && testimonials && (
+        <TestimonialsSection data={testimonials} />
+      )}
       {settings?.show_cta !== false && cta && <CtaSection data={cta} />}
       <FooterSection settings={settings} logo={logo} footerData={footerData} />
     </div>

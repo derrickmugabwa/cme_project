@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -18,13 +19,11 @@ import {
   XCircle, 
   Clock, 
   Search, 
-  Upload, 
-  Settings, 
   RefreshCw,
   FileSpreadsheet,
   Monitor,
   Trash2,
-  AlertTriangle
+  FileDown,
 } from 'lucide-react';
 import TeamsAttendanceUpload from './TeamsAttendanceUpload';
 import SessionAttendanceSettings from './SessionAttendanceSettings';
@@ -41,44 +40,122 @@ interface AttendanceManagementProps {
   isAdmin: boolean;
 }
 
+interface Profile {
+  id: string;
+  full_name: string;
+  email?: string;
+}
+
+interface AttendanceRecordRow {
+  id: string;
+  user_id: string;
+  session_id: string;
+  check_in_time: string;
+  join_time: string | null;
+  leave_time: string | null;
+  duration_minutes: number | null;
+  is_eligible_for_certificate: boolean;
+  attendance_source: string;
+  status: string;
+  approved_at: string | null;
+  notes: string | null;
+}
+
+interface AttendanceRecord extends AttendanceRecordRow {
+  profiles: Profile | null;
+  user_name: string;
+  user_email: string;
+  session_duration_minutes: number;
+}
+
+interface UploadHistoryItem {
+  id: string;
+  uploaded_at: string;
+  filename: string;
+  record_count: number;
+  success_count: number;
+  error_count: number;
+  status: string;
+  error_message: string | null;
+  uploaded_by: string | null;
+  profiles: Pick<Profile, 'full_name'> | null;
+}
+
 export default function AttendanceManagement({ 
   sessionId, 
   isAdmin 
 }: AttendanceManagementProps) {
   const [activeTab, setActiveTab] = useState('records');
-  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [uploadHistory, setUploadHistory] = useState<any[]>([]);
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
   const [sessionTitle, setSessionTitle] = useState('');
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const [showClearIndividualDialog, setShowClearIndividualDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    fetchAttendanceRecords();
-    if (isAdmin) {
-      fetchUploadHistory();
-    }
-  }, [sessionId]);
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery) return attendanceRecords;
 
-  useEffect(() => {
-    if (searchQuery) {
-      const filtered = attendanceRecords.filter(record => 
-        record.user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        record.user_email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredRecords(filtered);
-    } else {
-      setFilteredRecords(attendanceRecords);
-    }
+    const query = searchQuery.toLowerCase();
+    return attendanceRecords.filter(record => 
+      record.user_name.toLowerCase().includes(query) ||
+      record.user_email.toLowerCase().includes(query)
+    );
   }, [searchQuery, attendanceRecords]);
 
-  const fetchAttendanceRecords = async () => {
+  const fetchUploadHistory = useCallback(async () => {
     try {
-      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('attendance_upload_history')
+        .select(`
+          id,
+          uploaded_at,
+          filename,
+          record_count,
+          success_count,
+          error_count,
+          status,
+          error_message,
+          uploaded_by
+        `)
+        .eq('session_id', sessionId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const uploaderIds = data.map(item => item.uploaded_by).filter(Boolean);
+        
+        if (uploaderIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', uploaderIds);
+            
+          const enrichedData = data.map(item => {
+            const uploader = profilesData?.find(p => p.id === item.uploaded_by);
+            return {
+              ...item,
+              profiles: uploader || null
+            };
+          });
+          
+          setUploadHistory(enrichedData);
+          return;
+        }
+      }
+      
+      setUploadHistory((data || []).map(item => ({ ...item, profiles: null })));
+    } catch (error) {
+      console.error('Error fetching upload history:', error);
+      setUploadHistory([]);
+    }
+  }, [sessionId, supabase]);
+
+  const fetchAttendanceRecords = useCallback(async () => {
+    try {
       
       // First, get the session data to retrieve meeting duration
       const { data: sessionData, error: sessionError } = await supabase
@@ -130,8 +207,6 @@ export default function AttendanceManagement({
       
       if (attendanceData.length === 0) {
         setAttendanceRecords([]);
-        setFilteredRecords([]);
-        setIsLoading(false);
         return;
       }
       
@@ -146,7 +221,7 @@ export default function AttendanceManagement({
       
       // Combine the data
       const data = attendanceData.map(record => {
-        const profile = profilesData.find(p => p.id === record.user_id);
+        const profile = profilesData.find((p: Profile) => p.id === record.user_id);
         return {
           ...record,
           profiles: profile || null
@@ -169,61 +244,23 @@ export default function AttendanceManagement({
       } : 'No records');
       
       setAttendanceRecords(formattedData);
-      setFilteredRecords(formattedData);
     } catch (error) {
       console.error('Error fetching attendance records:', error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [sessionId, supabase]);
 
-  const fetchUploadHistory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('attendance_upload_history')
-        .select(`
-          id,
-          uploaded_at,
-          filename,
-          record_count,
-          success_count,
-          error_count,
-          status,
-          uploaded_by
-        `)
-        .eq('session_id', sessionId)
-        .order('uploaded_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Get uploader names
-      if (data && data.length > 0) {
-        const uploaderIds = data.map(item => item.uploaded_by).filter(Boolean);
-        
-        if (uploaderIds.length > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', uploaderIds);
-            
-          const enrichedData = data.map(item => {
-            const uploader = profilesData?.find(p => p.id === item.uploaded_by);
-            return {
-              ...item,
-              profiles: uploader || null
-            };
-          });
-          
-          setUploadHistory(enrichedData);
-          return;
-        }
+  useEffect(() => {
+    const loadAttendance = async () => {
+      await fetchAttendanceRecords();
+      if (isAdmin) {
+        await fetchUploadHistory();
       }
-      
-      setUploadHistory(data || []);
-    } catch (error) {
-      console.error('Error fetching upload history:', error);
-    }
-  };
+    };
+
+    queueMicrotask(() => {
+      void loadAttendance();
+    });
+  }, [fetchAttendanceRecords, fetchUploadHistory, isAdmin]);
 
   const handleApproveReject = async (recordId: string, approve: boolean) => {
     try {
@@ -284,7 +321,7 @@ export default function AttendanceManagement({
     }
   };
 
-  const formatDuration = (minutes: number) => {
+  const formatDuration = (minutes: number | null) => {
     if (!minutes && minutes !== 0) return 'N/A';
     
     const hours = Math.floor(minutes / 60);
@@ -301,6 +338,54 @@ export default function AttendanceManagement({
     
     const date = new Date(dateString);
     return date.toLocaleString();
+  };
+
+  const handleExportAttendance = () => {
+    const worksheetData = filteredRecords.map((record) => ({
+      'Attendee Name': record.user_name,
+      'Attendee Email': record.user_email,
+      Source: record.attendance_source === 'teams_csv' ? 'Teams' : 'App',
+      'Check-in Time': formatDateTime(record.check_in_time),
+      'Join Time': record.join_time ? formatDateTime(record.join_time) : 'N/A',
+      'Leave Time': record.leave_time ? formatDateTime(record.leave_time) : 'N/A',
+      'Attendance Duration': formatDuration(record.duration_minutes),
+      'Attendance Duration Minutes': record.duration_minutes ?? '',
+      'Meeting Duration': formatDuration(record.session_duration_minutes),
+      'Meeting Duration Minutes': record.session_duration_minutes,
+      'Eligible for Certificate': record.is_eligible_for_certificate ? 'Yes' : 'No',
+      Reason: record.notes || (record.is_eligible_for_certificate ? 'Eligible' : 'No reason recorded'),
+      Status: record.status,
+      'Approved At': record.approved_at ? formatDateTime(record.approved_at) : 'N/A',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    worksheet['!cols'] = [
+      { wch: 28 },
+      { wch: 32 },
+      { wch: 12 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 26 },
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 64 },
+      { wch: 18 },
+      { wch: 22 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Records');
+
+    const safeTitle = (sessionTitle || 'webinar')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const dateStamp = new Date().toISOString().slice(0, 10);
+
+    XLSX.writeFile(workbook, `attendance-records-${safeTitle || sessionId}-${dateStamp}.xlsx`);
   };
 
   return (
@@ -363,6 +448,16 @@ export default function AttendanceManagement({
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                {isAdmin && filteredRecords.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={handleExportAttendance}
+                    className="flex items-center gap-1 bg-[#008C45] text-white hover:bg-[#006633]"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Export Excel
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="icon"
@@ -395,20 +490,15 @@ export default function AttendanceManagement({
                       <TableHead>Attendance Duration</TableHead>
                       <TableHead>Meeting Duration</TableHead>
                       <TableHead>Eligible</TableHead>
+                      <TableHead>Reason</TableHead>
                       <TableHead>Status</TableHead>
                       {isAdmin && <TableHead>Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {uploadHistory.length === 0 ? (
+                    {filteredRecords.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          No upload history found
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredRecords.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={isAdmin ? 8 : 7} className="text-center py-8">
+                        <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8">
                           No attendance records found
                         </TableCell>
                       </TableRow>
@@ -456,6 +546,9 @@ export default function AttendanceManagement({
                                 <span>No</span>
                               </div>
                             )}
+                          </TableCell>
+                          <TableCell className="max-w-xs text-sm text-muted-foreground">
+                            {record.notes || (record.is_eligible_for_certificate ? 'Eligible' : 'No reason recorded')}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(record.status)}
@@ -546,13 +639,14 @@ export default function AttendanceManagement({
                           <TableHead>Records</TableHead>
                           <TableHead>Success</TableHead>
                           <TableHead>Errors</TableHead>
+                          <TableHead>Details</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {uploadHistory.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8">
+                            <TableCell colSpan={8} className="text-center py-8">
                               No upload history found
                             </TableCell>
                           </TableRow>
@@ -577,6 +671,9 @@ export default function AttendanceManagement({
                               </TableCell>
                               <TableCell className="text-red-600">
                                 {upload.error_count}
+                              </TableCell>
+                              <TableCell className="max-w-sm text-sm text-muted-foreground">
+                                {upload.error_message || 'No issues recorded'}
                               </TableCell>
                               <TableCell>
                                 {upload.status === 'completed' ? (

@@ -35,7 +35,7 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
 
       <div className="container relative mx-auto px-6 lg:px-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          {/* Left – copy */}
+          {/* Left copy */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -97,7 +97,7 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
             </div>
           </motion.div>
 
-          {/* Right – image panel */}
+          {/* Right image panel */}
           <motion.div
             initial={{ opacity: 0, x: 32 }}
             animate={{ opacity: 1, x: 0 }}
@@ -117,46 +117,6 @@ export const HeroSection = ({ data }: HeroSectionProps) => {
               {/* Thin green top bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-[#008C45]" />
             </div>
-
-            {/* Floating badge — certificate */}
-            <motion.div
-              className="absolute -top-5 -right-5 bg-white border border-gray-100 shadow-lg rounded-xl px-4 py-3"
-              initial={{ y: 16, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.5 }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-[#008C45]/10 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#008C45]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Certificate Earned</p>
-                  <p className="text-sm font-semibold text-gray-800">Medical Ethics</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Floating badge — webinar */}
-            <motion.div
-              className="absolute -bottom-5 -left-5 bg-white border border-gray-100 shadow-lg rounded-xl px-4 py-3"
-              initial={{ y: 16, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.75, duration: 0.5 }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Upcoming Webinar</p>
-                  <p className="text-sm font-semibold text-gray-800">In 2 hours</p>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>

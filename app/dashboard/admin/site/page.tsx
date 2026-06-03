@@ -5,19 +5,15 @@ import { createClient } from "@/lib/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Eye, FileText, Users, Video } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function SiteManagementPage() {
   const [lastUpdated, setLastUpdated] = useState<{[key: string]: string}>({});
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
     async function fetchLastUpdates() {
-      setIsLoading(true);
-      
       try {
         // Get the latest update from each landing page table
         const tables = [
@@ -27,7 +23,8 @@ export default function SiteManagementPage() {
           'landing_stats',
           'landing_cta',
           'landing_settings',
-          'footer_settings'
+          'footer_settings',
+          'legal_pages'
         ];
         
         const updates: {[key: string]: string} = {};
@@ -40,7 +37,9 @@ export default function SiteManagementPage() {
             .limit(1);
             
           if (error) {
-            console.error(`Error fetching ${table}:`, error);
+            if (table !== 'legal_pages') {
+              console.error(`Error fetching ${table}:`, error);
+            }
           } else if (data && data.length > 0) {
             updates[table] = new Date(data[0].updated_at).toLocaleString();
           }
@@ -49,8 +48,6 @@ export default function SiteManagementPage() {
         setLastUpdated(updates);
       } catch (error) {
         console.error('Error fetching updates:', error);
-      } finally {
-        setIsLoading(false);
       }
     }
     
@@ -106,6 +103,13 @@ export default function SiteManagementPage() {
       icon: <FileText className="h-5 w-5" />,
       href: "/dashboard/admin/site/footer",
       lastUpdate: lastUpdated['footer_settings'] || 'Not updated yet'
+    },
+    {
+      title: "Legal Pages",
+      description: "Internal terms, privacy, and policy pages",
+      icon: <FileText className="h-5 w-5" />,
+      href: "/dashboard/admin/site/legal-pages",
+      lastUpdate: lastUpdated['legal_pages'] || 'Not updated yet'
     }
   ];
 

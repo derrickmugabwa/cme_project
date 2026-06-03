@@ -22,7 +22,7 @@ interface LandingSettings {
   social_twitter?: string | null;
   social_linkedin?: string | null;
   social_instagram?: string | null;
-  social_links?: any;
+  social_links?: Record<string, string> | null;
   footer_text?: string;
   created_at?: string;
   updated_at?: string;
@@ -149,6 +149,8 @@ export const FooterSection = ({ settings, logo, footerData }: FooterSectionProps
                   <li key={link.name}>
                     <Link 
                       href={link.href}
+                      target={link.opens_new_tab ? "_blank" : undefined}
+                      rel={link.opens_new_tab ? "noopener noreferrer" : undefined}
                       className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
                     >
                       {link.name}
@@ -168,19 +170,19 @@ export const FooterSection = ({ settings, logo, footerData }: FooterSectionProps
             {footerData.settings?.show_legal_links && (
               <div className="flex space-x-6 mt-4 md:mt-0">
                 <Link 
-                  href="/privacy" 
+                  href="/legal/privacy" 
                   className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
                 >
                   Privacy Policy
                 </Link>
                 <Link 
-                  href="/terms" 
+                  href="/legal/terms" 
                   className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
                 >
                   Terms of Service
                 </Link>
                 <Link 
-                  href="/cookies" 
+                  href="/legal/cookies" 
                   className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors"
                 >
                   Cookie Policy

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/server';
+import { getMediaFileType, validateMediaFile } from '@/types/session-media';
 
 // GET /api/sessions/[id]/media - Get all media files for a session
 export async function GET(
@@ -41,9 +42,12 @@ export async function GET(
     }
 
     return NextResponse.json({ media: media || [] });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error getting session media:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to get session media' },
+      { status: 500 }
+    );
   }
 }
 
@@ -100,32 +104,19 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
-    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    const allAllowedTypes = [...allowedVideoTypes, ...allowedImageTypes];
-
-    if (!allAllowedTypes.includes(file.type)) {
+    const validation = validateMediaFile(file);
+    if (!validation.isValid) {
       return NextResponse.json({ 
-        error: 'Invalid file type. Allowed types: MP4, MOV, AVI, WebM (videos), JPEG, PNG, WebP, GIF (images)' 
-      }, { status: 400 });
-    }
-
-    // Validate file size (500MB limit)
-    const maxSize = 500 * 1024 * 1024; // 500MB in bytes
-    if (file.size > maxSize) {
-      return NextResponse.json({ 
-        error: 'File too large. Maximum size is 500MB' 
+        error: validation.error || 'Invalid file type'
       }, { status: 400 });
     }
 
     // Determine file type category
-    const detectedFileType = allowedVideoTypes.includes(file.type) ? 'video' : 'image';
-    const finalFileType = fileType || detectedFileType;
+    const detectedFileType = getMediaFileType(file);
+    const finalFileType = fileType === detectedFileType ? fileType : detectedFileType;
 
     // Generate unique filename
     const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const uniqueFileName = `${timestamp}_${sanitizedFileName}`;
     
@@ -133,7 +124,7 @@ export async function POST(
     const storagePath = `session-media/${user.id}/${sessionId}/${uniqueFileName}`;
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('content')
       .upload(storagePath, file, {
         cacheControl: '3600',
@@ -184,8 +175,11 @@ export async function POST(
       message: 'File uploaded successfully' 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error uploading session media:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to upload session media' },
+      { status: 500 }
+    );
   }
 }

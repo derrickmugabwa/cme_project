@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { createClient } from '@/lib/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -22,7 +21,22 @@ import {
 
 interface TeamsAttendanceUploadProps {
   sessionId: string;
-  onUploadComplete?: (data: any) => void;
+  onUploadComplete?: (data: UploadResult) => void;
+}
+
+interface UploadError {
+  name: string;
+  email: string;
+  error: string;
+}
+
+interface UploadResult {
+  totalRecords: number;
+  successCount: number;
+  errorCount: number;
+  ineligibleCount?: number;
+  uploadId: string;
+  errors?: UploadError[];
 }
 
 export default function TeamsAttendanceUpload({ 
@@ -32,10 +46,9 @@ export default function TeamsAttendanceUpload({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -90,20 +103,20 @@ export default function TeamsAttendanceUpload({
       console.log('Upload result:', result);
       setUploadResult(result);
       
-      // Show toast notification with summary
+      // Show upload feedback with summary
       if (result.totalRecords === 0) {
         setError('No records found in the uploaded file');
       } else if (result.errorCount > 0 && result.errorCount === result.totalRecords) {
-        setError(`All ${result.totalRecords} records failed. Check if emails match registered users.`);
+        setError(`All ${result.totalRecords} records failed. No matching registered users were found for the uploaded attendance records.`);
       } else if (result.errorCount > 0) {
-        setError(`${result.successCount} records processed, ${result.errorCount} failed.`);
+        setError(`${result.successCount} records processed, ${result.errorCount} could not be matched to registered users.`);
       }
       
       if (onUploadComplete) {
         onUploadComplete(result);
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during upload');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during upload');
     } finally {
       setIsUploading(false);
     }
@@ -178,9 +191,12 @@ export default function TeamsAttendanceUpload({
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertTitle>Upload Complete</AlertTitle>
               <AlertDescription>
-                Successfully processed {uploadResult.successful} of {uploadResult.total} records.
-                {uploadResult.failed > 0 && (
-                  <span className="text-amber-600"> {uploadResult.failed} records had errors.</span>
+                Successfully processed {uploadResult.successCount} of {uploadResult.totalRecords} records.
+                {(uploadResult.ineligibleCount || 0) > 0 && (
+                  <span className="text-amber-600"> {uploadResult.ineligibleCount} processed records are not eligible for certificates.</span>
+                )}
+                {uploadResult.errorCount > 0 && (
+                  <span className="text-red-600"> {uploadResult.errorCount} records could not be matched.</span>
                 )}
               </AlertDescription>
             </Alert>
@@ -197,7 +213,7 @@ export default function TeamsAttendanceUpload({
                 <h3 className="text-lg font-semibold mb-2">Upload Results</h3>
                 
                 {/* Summary Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                   <div className="bg-green-50 border border-green-200 rounded-md p-4">
                     <div className="text-sm text-green-600 font-medium">Total Records</div>
                     <div className="text-2xl font-bold">{uploadResult.totalRecords || 0}</div>
@@ -209,6 +225,10 @@ export default function TeamsAttendanceUpload({
                   <div className="bg-red-50 border border-red-200 rounded-md p-4">
                     <div className="text-sm text-red-600 font-medium">Failed</div>
                     <div className="text-2xl font-bold">{uploadResult.errorCount || 0}</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                    <div className="text-sm text-amber-600 font-medium">Not Eligible</div>
+                    <div className="text-2xl font-bold">{uploadResult.ineligibleCount || 0}</div>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                     <div className="text-sm text-blue-600 font-medium">Upload ID</div>
@@ -230,7 +250,7 @@ export default function TeamsAttendanceUpload({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {uploadResult.errors.map((error: any, index: number) => (
+                        {uploadResult.errors.map((error, index) => (
                           <TableRow key={index}>
                             <TableCell>
                               <XCircle className="h-4 w-4 text-red-500" />

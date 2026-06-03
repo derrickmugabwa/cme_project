@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Play, Image as ImageIcon, Trash2, AlertCircle, Upload, FileVideo, Clock, Eye } from 'lucide-react';
+import { Play, Image as ImageIcon, Trash2, AlertCircle, Upload, FileVideo, Clock, Eye, FileText, ExternalLink } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 import ImageLightbox from './ImageLightbox';
-import { SessionMedia, formatFileSize, isVideoFile, isImageFile } from '@/types/session-media';
+import { SessionMedia, formatFileSize, isVideoFile, isImageFile, isDocumentFile, getDocumentTypeLabel } from '@/types/session-media';
 
 interface SessionMediaViewerProps {
   sessionId: string;
@@ -21,7 +21,6 @@ export default function SessionMediaViewer({
   sessionId,
   media: initialMedia,
   canEdit = false,
-  userRole
 }: SessionMediaViewerProps) {
   const [media, setMedia] = useState<SessionMedia[]>(initialMedia || []);
   const [loading, setLoading] = useState(!initialMedia);
@@ -31,14 +30,7 @@ export default function SessionMediaViewer({
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // Fetch media if not provided
-  useEffect(() => {
-    if (!initialMedia) {
-      fetchMedia();
-    }
-  }, [sessionId, initialMedia]);
-
-  const fetchMedia = async () => {
+  const fetchMedia = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -51,13 +43,22 @@ export default function SessionMediaViewer({
 
       const data = await response.json();
       setMedia(data.media || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching media:', error);
-      setError(error.message || 'Failed to load media');
+      setError(error instanceof Error ? error.message : 'Failed to load media');
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId]);
+
+  // Fetch media if not provided
+  useEffect(() => {
+    if (!initialMedia) {
+      queueMicrotask(() => {
+        void fetchMedia();
+      });
+    }
+  }, [fetchMedia, initialMedia]);
 
   const handleDeleteMedia = async (mediaId: string) => {
     if (!canEdit) return;
@@ -70,7 +71,8 @@ export default function SessionMediaViewer({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete media');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to delete media');
       }
 
       // Remove from local state
@@ -81,9 +83,9 @@ export default function SessionMediaViewer({
         setSelectedVideo(null);
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting media:', error);
-      setError(error.message || 'Failed to delete media');
+      setError(error instanceof Error ? error.message : 'Failed to delete media');
     } finally {
       setDeleting(null);
     }
@@ -101,9 +103,10 @@ export default function SessionMediaViewer({
     setLightboxIndex(0);
   };
 
-  // Separate videos and images
+  // Separate files by type
   const videos = media.filter(m => isVideoFile(m.mime_type));
   const images = media.filter(m => isImageFile(m.mime_type));
+  const documents = media.filter(m => isDocumentFile(m.mime_type));
 
   if (loading) {
     return (
@@ -177,7 +180,7 @@ export default function SessionMediaViewer({
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No Media Files Yet</h3>
         <p className="text-gray-500 mb-4 max-w-sm mx-auto">
-          This session doesn't have any videos or images uploaded yet. Media files help attendees preview and understand the session content.
+          This session does not have any videos, images, or documents uploaded yet. Session files help attendees preview and understand the session content.
         </p>
         {canEdit && (
           <div className="text-sm text-gray-400">
@@ -384,6 +387,70 @@ export default function SessionMediaViewer({
                       <Badge variant="outline" className="text-xs">
                         {image.mime_type.split('/')[1]?.toUpperCase()}
                       </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Documents Section */}
+      {documents.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-sky-200 rounded-lg flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
+            <h4 className="text-lg font-semibold text-gray-900">Documents</h4>
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+              {documents.length}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {documents.map((document) => (
+              <Card key={document.id} className="group transition-all duration-200 hover:shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">{document.file_name}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                          <span>{formatFileSize(document.file_size)}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {getDocumentTypeLabel(document.mime_type)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a href={document.public_url || '#'} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Open
+                        </a>
+                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(document.id)}
+                          disabled={deleting === document.id}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

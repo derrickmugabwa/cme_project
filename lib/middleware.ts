@@ -5,6 +5,18 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+  const pathname = request.nextUrl.pathname
+  const isPublicPage =
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/verify-certificate') ||
+    pathname.startsWith('/legal') ||
+    pathname === '/terms' ||
+    pathname === '/privacy' ||
+    pathname === '/cookies' ||
+    pathname.startsWith('/api/inngest') ||
+    pathname.startsWith('/api/test-reminder')
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,12 +52,7 @@ export async function updateSession(request: NextRequest) {
   // Redirect unauthenticated users to login page except for public pages
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    request.nextUrl.pathname !== '/' &&
-    !request.nextUrl.pathname.startsWith('/verify-certificate') &&
-    !request.nextUrl.pathname.startsWith('/api/inngest') &&
-    !request.nextUrl.pathname.startsWith('/api/test-reminder')
+    !isPublicPage
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'

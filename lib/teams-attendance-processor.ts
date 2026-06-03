@@ -14,10 +14,18 @@ interface TeamsParticipant {
   upn?: string; // User Principal Name (often used in Microsoft systems)
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  username?: string | null;
+  full_name: string;
+}
+
 interface ProcessResult {
   totalRecords: number;
   successCount: number;
   errorCount: number;
+  ineligibleCount: number;
   errors: Array<{
     name: string;
     email: string;
@@ -112,6 +120,7 @@ export async function processTeamsAttendanceFile(
     totalRecords: teamsData.participants.length,
     successCount: 0,
     errorCount: 0,
+    ineligibleCount: 0,
     errors: []
   };
   
@@ -131,7 +140,7 @@ export async function processTeamsAttendanceFile(
   /**
  * Find user profile by email or name
  */
-async function findUserProfileByEmail(supabase: SupabaseClient, participant: TeamsParticipant): Promise<any | null> {
+async function findUserProfileByEmail(supabase: SupabaseClient, participant: TeamsParticipant): Promise<UserProfile | null> {
   const email = participant.email.toLowerCase();
   const upn = participant.upn?.toLowerCase();
   const name = participant.name;
@@ -217,11 +226,6 @@ async function findUserProfileByEmail(supabase: SupabaseClient, participant: Tea
   return null;
 }
 
-  // Get all profiles to do flexible matching
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, email, username, full_name');
-  
   // Process each participant
   for (const participant of enhancedParticipants) {
     try {
@@ -233,7 +237,7 @@ async function findUserProfileByEmail(supabase: SupabaseClient, participant: Tea
         result.errors.push({
           name: participant.name,
           email: participant.email,
-          error: 'User not found in system'
+          error: 'No matching registered user was found for this attendance record'
         });
         continue;
       }
@@ -274,7 +278,13 @@ async function findUserProfileByEmail(supabase: SupabaseClient, participant: Tea
       
       // Determine if eligible for certificate based on duration
       const isEligible = participant.durationMinutes >= requiredMinutes;
+      const eligibilityReason = isEligible
+        ? null
+        : `Attended ${participant.durationMinutes} minute${participant.durationMinutes === 1 ? '' : 's'}; required ${requiredMinutes} minute${requiredMinutes === 1 ? '' : 's'} for certificate eligibility.`;
       console.log(`Participant ${participant.name} attended for ${participant.durationMinutes} minutes, required ${requiredMinutes} minutes, eligible: ${isEligible}`);
+      if (!isEligible) {
+        result.ineligibleCount++;
+      }
       
       
       // Create or update attendance record
@@ -296,6 +306,7 @@ async function findUserProfileByEmail(supabase: SupabaseClient, participant: Tea
               duration_minutes: participant.durationMinutes,
               is_eligible_for_certificate: isEligible,
               attendance_source: 'teams_csv',
+              notes: eligibilityReason,
               updated_at: new Date().toISOString()
             })
             .eq('id', existingRecord.id);
@@ -314,7 +325,8 @@ async function findUserProfileByEmail(supabase: SupabaseClient, participant: Tea
             attendance_source: 'teams_csv',
             check_in_time: participant.joinTime,
             join_time: participant.joinTime,
-            leave_time: participant.leaveTime
+            leave_time: participant.leaveTime,
+            notes: eligibilityReason
           })
           .select();
         

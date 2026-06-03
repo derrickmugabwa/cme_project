@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/server';
 import teamsMeetingService from '@/lib/teamsMeetingService';
 
+function isPrivilegedWebinarDeleter(user: { id: string; email?: string | null }) {
+  const allowedIds = (process.env.WEBINAR_DELETE_OVERRIDE_USER_IDS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  const allowedEmails = (process.env.WEBINAR_DELETE_OVERRIDE_EMAILS || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  return (
+    allowedIds.includes(user.id) ||
+    Boolean(user.email && allowedEmails.includes(user.email.toLowerCase()))
+  );
+}
+
 // GET /api/sessions/[id] - Get a single session
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -70,18 +87,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     
     // Parse request body
     const sessionData = await request.json();
+    const isManualOnlineLink = Boolean(sessionData.is_online && sessionData.teams_join_url);
     
     // Update session in database
     const { data: updatedSession, error } = await supabase
       .from('sessions')
       .update({
         title: sessionData.title,
+        topic: sessionData.topic,
         description: sessionData.description,
         start_time: sessionData.start_time,
         end_time: sessionData.end_time,
         location: sessionData.location,
         course_id: sessionData.course_id,
         is_online: sessionData.is_online,
+        online_provider: sessionData.online_provider,
+        teams_join_url: isManualOnlineLink ? sessionData.teams_join_url : null,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -93,7 +114,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     
     // Handle Teams meeting update
-    if (updatedSession.is_online) {
+    if (updatedSession.is_online && updatedSession.online_provider === 'teams' && !isManualOnlineLink) {
       try {
         // If session is online, create or update Teams meeting
         const meetingDetails = await teamsMeetingService.updateTeamsMeeting(user.id, {
@@ -116,10 +137,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           teamsError: teamsError.message
         });
       }
-    } else if (!updatedSession.is_online && existingSession?.teams_meeting_id) {
-      // If session was changed from online to in-person, cancel Teams meeting
+    } else if (
+      existingSession?.teams_meeting_id &&
+      (!updatedSession.is_online || updatedSession.online_provider !== 'teams' || isManualOnlineLink)
+    ) {
+      // If the integrated Teams meeting is no longer used, cancel it
       try {
         await teamsMeetingService.cancelTeamsMeeting(user.id, id);
+        if (isManualOnlineLink) {
+          await supabase
+            .from('sessions')
+            .update({
+              online_provider: sessionData.online_provider,
+              teams_join_url: sessionData.teams_join_url,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        }
       } catch (teamsError: any) {
         console.error('Error canceling Teams meeting:', teamsError);
       }
@@ -172,7 +206,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       throw enrollmentCountError;
     }
 
-    if ((enrollmentCount || 0) > 0) {
+    const canOverrideEnrollmentDelete = isPrivilegedWebinarDeleter(user);
+
+    if ((enrollmentCount || 0) > 0 && !canOverrideEnrollmentDelete) {
       return NextResponse.json(
         { error: 'Cannot delete a webinar that has enrollments' },
         { status: 409 }
@@ -216,7 +252,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         .update({
           archived_at: new Date().toISOString(),
           archived_by: user.id,
-          archive_reason: 'Archived via admin interface',
+          archive_reason: (enrollmentCount || 0) > 0
+            ? 'Archived via privileged enrolled-webinar override'
+            : 'Archived via admin interface',
           updated_at: new Date().toISOString()
         })
         .eq('id', id)

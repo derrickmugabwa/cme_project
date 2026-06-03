@@ -468,13 +468,12 @@ export default function SessionsPage() {
                   
                   <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t">
                     <Button 
-                      variant="ghost" 
+                      variant="link" 
                       size="sm"
                       onClick={() => router.push(`/dashboard/sessions/${session.id}`)}
-                      className="h-8 w-8 p-0"
+                      className="h-8 px-0 text-green-600 hover:text-green-700"
                     >
-                      <span className="sr-only">View details</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                      Enroll Now
                     </Button>
                     {userRole && userRole !== 'user' && (
                       <Button 
@@ -577,13 +576,12 @@ export default function SessionsPage() {
                       <td className="p-4 align-middle">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
-                            variant="ghost" 
+                            variant="link" 
                             size="sm"
                             onClick={() => router.push(`/dashboard/sessions/${session.id}`)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 px-0 text-green-600 hover:text-green-700"
                           >
-                            <span className="sr-only">View details</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            Enroll Now
                           </Button>
                           {userRole && userRole !== 'user' && (
                             <Button 

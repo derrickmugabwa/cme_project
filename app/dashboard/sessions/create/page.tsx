@@ -4,20 +4,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Video, MessageSquare, Calendar, Clock } from 'lucide-react';
+import { Video, MessageSquare, Calendar, Clock, FileText, Image as ImageIcon, FileVideo } from 'lucide-react';
 import DatePicker from 'react-datepicker';
-import { format, setHours, setMinutes, addHours } from 'date-fns';
+import { addHours } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import MediaUploadZone from '@/components/sessions/MediaUploadZone';
-import { SessionMedia } from '@/types/session-media';
+import { SessionMedia, getDocumentTypeLabel } from '@/types/session-media';
 import QuestionManager, { DraftQuestion } from '@/components/sessions/QuestionManager';
 
 // Supabase client will be initialized in the component
@@ -115,7 +115,7 @@ export default function CreateSessionPage() {
     }
     
     checkMicrosoftAuth();
-  }, []);
+  }, [toast]);
   
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -375,12 +375,12 @@ export default function CreateSessionPage() {
         
         // Redirect to session list
         router.push('/dashboard/sessions');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating session:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "An unexpected error occurred"
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       });
     } finally {
       setLoading(false);
@@ -721,7 +721,7 @@ export default function CreateSessionPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">
-                Upload videos and images for your webinar. You can add trailers, promotional content, and visual materials.
+                Upload videos, images, and documents for your webinar. You can add trailers, promotional content, slides, handouts, and reference materials.
               </p>
               <MediaUploadZone
                 onFilesUploaded={(files) => setSessionMedia(prev => [...prev, ...files])}
@@ -738,10 +738,19 @@ export default function CreateSessionPage() {
                     {sessionMedia.map((media, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm">
-                            {media.file_type === 'video' ? '🎥' : '🖼️'}
-                          </span>
-                          <span className="text-sm font-medium">{media.file_name}</span>
+                          {media.file_type === 'video' ? (
+                            <FileVideo className="h-4 w-4 text-red-500" />
+                          ) : media.file_type === 'image' ? (
+                            <ImageIcon className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-blue-500" />
+                          )}
+                          <div>
+                            <span className="text-sm font-medium">{media.file_name}</span>
+                            {media.file_type === 'document' && (
+                              <p className="text-xs text-gray-500">{getDocumentTypeLabel(media.mime_type)}</p>
+                            )}
+                          </div>
                         </div>
                         <Button
                           variant="ghost"

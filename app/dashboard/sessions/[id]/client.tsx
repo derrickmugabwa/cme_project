@@ -81,10 +81,11 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
   const [enrollmentLoading, setEnrollmentLoading] = useState(true);
   const [enrolleesLoading, setEnrolleesLoading] = useState(true);
   const [authSession, setAuthSession] = useState<any>(null);
+  const [canDeleteEnrolledWebinars, setCanDeleteEnrolledWebinars] = useState(false);
   const hasEnrollments = enrollees.length > 0;
   const canEditWebinar = currentUserRole === 'admin';
   const canDeleteWebinar = currentUserRole && currentUserRole !== 'user';
-  const deleteDisabled = deleting || enrolleesLoading || hasEnrollments;
+  const deleteDisabled = deleting || enrolleesLoading || (hasEnrollments && !canDeleteEnrolledWebinars);
   
   // Function to fetch enrollment status
   const fetchEnrollmentStatus = async () => {
@@ -160,6 +161,19 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
         // Fetch attendance records if needed in the future
         // For now, we'll just set an empty array
         setAttendance([]);
+
+        try {
+          const deletePermissionResponse = await fetch(`/api/sessions/${sessionId}/delete-permission`);
+          if (deletePermissionResponse.ok) {
+            const deletePermission = await deletePermissionResponse.json();
+            setCanDeleteEnrolledWebinars(Boolean(deletePermission.canDeleteEnrolledWebinars));
+          } else {
+            setCanDeleteEnrolledWebinars(false);
+          }
+        } catch (permissionError) {
+          console.error('Error fetching delete permission:', permissionError);
+          setCanDeleteEnrolledWebinars(false);
+        }
         
         // Fetch enrollees (users who have enrolled in this session)
         try {
@@ -283,7 +297,7 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
 
   // Handle webinar deletion
   const handleDelete = async () => {
-    if (hasEnrollments) {
+    if (hasEnrollments && !canDeleteEnrolledWebinars) {
       toast({
         title: 'Cannot Delete Webinar',
         description: 'This webinar has enrollments and cannot be deleted.',
@@ -579,11 +593,26 @@ export default function WebinarDetailClient({ sessionId }: { sessionId: string }
                     disabled={deleteDisabled}
                     className="w-full"
                   >
-                    {hasEnrollments ? 'Delete Unavailable' : deleteConfirm ? 'Confirm Delete' : deleting ? 'Deleting...' : 'Delete Webinar'}
+                    {hasEnrollments && !canDeleteEnrolledWebinars
+                      ? 'Delete Unavailable'
+                      : deleteConfirm
+                        ? hasEnrollments
+                          ? 'Confirm Override Delete'
+                          : 'Confirm Delete'
+                        : deleting
+                          ? 'Deleting...'
+                          : hasEnrollments
+                            ? 'Override Delete'
+                            : 'Delete Webinar'}
                   </Button>
-                  {hasEnrollments && (
+                  {hasEnrollments && !canDeleteEnrolledWebinars && (
                     <p className="mt-2 text-xs text-gray-500">
                       This webinar has enrolled attendees, so deletion is disabled.
+                    </p>
+                  )}
+                  {hasEnrollments && canDeleteEnrolledWebinars && (
+                    <p className="mt-2 text-xs text-amber-600">
+                      Privileged override: this will archive the webinar while preserving enrollments and related data.
                     </p>
                   )}
                 </div>

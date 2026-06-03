@@ -19,7 +19,35 @@ interface CtaSectionProps {
   data: CtaContent;
 }
 
+const ABSOLUTE_OR_SPECIAL_URL_PATTERN = /^(https?:\/\/|mailto:|tel:)/i;
+
+function getCtaHref(url: string) {
+  const trimmedUrl = url.trim();
+
+  if (
+    !trimmedUrl ||
+    trimmedUrl.startsWith("/") ||
+    trimmedUrl.startsWith("#") ||
+    ABSOLUTE_OR_SPECIAL_URL_PATTERN.test(trimmedUrl)
+  ) {
+    return trimmedUrl || "#";
+  }
+
+  return `https://${trimmedUrl}`;
+}
+
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href);
+}
+
 export const CtaSection = ({ data }: CtaSectionProps) => {
+  const primaryHref = getCtaHref(data.primary_button_url);
+  const secondaryHref = data.secondary_button_url
+    ? getCtaHref(data.secondary_button_url)
+    : null;
+  const primaryIsExternal = isExternalHref(primaryHref);
+  const secondaryIsExternal = secondaryHref ? isExternalHref(secondaryHref) : false;
+
   return (
     <section className="py-24 bg-[#008C45] relative overflow-hidden">
       {/* Subtle geometric accent — top-right corner block */}
@@ -67,7 +95,12 @@ export const CtaSection = ({ data }: CtaSectionProps) => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-3"
           >
-            <Link href={data.primary_button_url} passHref>
+            <Link
+              href={primaryHref}
+              target={primaryIsExternal ? "_blank" : undefined}
+              rel={primaryIsExternal ? "noopener noreferrer" : undefined}
+              passHref
+            >
               <motion.button
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
@@ -76,8 +109,13 @@ export const CtaSection = ({ data }: CtaSectionProps) => {
                 {data.primary_button_text}
               </motion.button>
             </Link>
-            {data.secondary_button_text && data.secondary_button_url && (
-              <Link href={data.secondary_button_url} passHref>
+            {data.secondary_button_text && secondaryHref && (
+              <Link
+                href={secondaryHref}
+                target={secondaryIsExternal ? "_blank" : undefined}
+                rel={secondaryIsExternal ? "noopener noreferrer" : undefined}
+                passHref
+              >
                 <motion.button
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.97 }}

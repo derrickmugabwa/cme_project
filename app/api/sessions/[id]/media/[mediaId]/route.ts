@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/server';
+import { createAdminClient, createClient } from '@/lib/server';
 
 // DELETE /api/sessions/[id]/media/[mediaId] - Delete a media file
 export async function DELETE(
@@ -8,6 +8,7 @@ export async function DELETE(
 ) {
   try {
     const supabase = await createClient();
+    const adminSupabase = createAdminClient();
     const { id: sessionId, mediaId } = await params;
 
     // Get the authenticated user
@@ -28,13 +29,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized - Faculty or Admin role required' }, { status: 403 });
     }
 
+    const { data: session, error: sessionError } = await adminSupabase
+      .from('sessions')
+      .select('id, created_by')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
     // Get media record to verify ownership and get storage path
-    const { data: media, error: mediaError } = await supabase
+    const { data: media, error: mediaError } = await adminSupabase
       .from('session_media')
-      .select(`
-        *,
-        sessions!inner(created_by)
-      `)
+      .select('*')
       .eq('id', mediaId)
       .eq('session_id', sessionId)
       .single();
@@ -44,12 +52,12 @@ export async function DELETE(
     }
 
     // Check if user can delete this media
-    if (media.sessions.created_by !== user.id && profile.role !== 'admin') {
+    if (session.created_by !== user.id && profile.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized - You can only delete media from your own sessions' }, { status: 403 });
     }
 
     // Delete from storage
-    const { error: storageError } = await supabase.storage
+    const { error: storageError } = await adminSupabase.storage
       .from('content')
       .remove([media.storage_path]);
 
@@ -59,21 +67,24 @@ export async function DELETE(
     }
 
     // Delete from database
-    const { error: dbError } = await supabase
+    const { error: dbError } = await adminSupabase
       .from('session_media')
       .delete()
       .eq('id', mediaId);
 
     if (dbError) {
       console.error('Database deletion error:', dbError);
-      return NextResponse.json({ error: 'Failed to delete media record' }, { status: 500 });
+      return NextResponse.json({ error: dbError.message || 'Failed to delete media record' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Media file deleted successfully' });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting session media:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete media' },
+      { status: 500 }
+    );
   }
 }
 
@@ -125,11 +136,11 @@ export async function PATCH(
     }
 
     // Parse request body
-    const updateData = await request.json();
+    const updateData = await request.json() as Record<string, unknown>;
     const allowedFields = ['display_order', 'file_name'];
     
     // Filter to only allowed fields
-    const filteredData: any = {};
+    const filteredData: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (updateData[field] !== undefined) {
         filteredData[field] = updateData[field];
@@ -158,8 +169,11 @@ export async function PATCH(
       message: 'Media updated successfully' 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating session media:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to update media' },
+      { status: 500 }
+    );
   }
 }

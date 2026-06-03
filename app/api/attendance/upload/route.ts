@@ -136,8 +136,6 @@ export async function POST(request: NextRequest) {
     
     try {
       // Parse the file based on type
-      let attendanceData;
-      
       // Parse the file data based on detected encoding
       const encoding = detectFileEncoding(fileBuffer);
       console.log(`Detected file encoding: ${encoding}`);
@@ -154,7 +152,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Process the raw data into structured attendance data
-      attendanceData = parseTeamsFile(rawData);
+      const attendanceData = parseTeamsFile(rawData);
       
       // Debug log for meeting info
       console.log('Meeting info from CSV:', attendanceData.meetingInfo ? {
@@ -197,6 +195,15 @@ export async function POST(request: NextRequest) {
         rawData // Pass the raw data for UPN extraction
       );
       
+      const resultMessages = [
+        result.errorCount > 0
+          ? `${result.errorCount} participants could not be matched to user profiles`
+          : null,
+        result.ineligibleCount > 0
+          ? `${result.ineligibleCount} processed participants did not meet certificate eligibility requirements`
+          : null,
+      ].filter(Boolean);
+
       // Update upload history status with detailed results using admin client
       await adminSupabase
         .from('attendance_upload_history')
@@ -205,8 +212,7 @@ export async function POST(request: NextRequest) {
           record_count: result.totalRecords,
           success_count: result.successCount,
           error_count: result.errorCount,
-          error_message: result.errorCount > 0 ? 
-            `${result.errorCount} participants could not be matched to user profiles` : null,
+          error_message: resultMessages.length > 0 ? resultMessages.join('; ') : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', uploadRecord.id);
@@ -218,7 +224,7 @@ export async function POST(request: NextRequest) {
         uploadId: uploadRecord.id,
         ...result
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error processing attendance file:', error);
       
       // Update upload history to failed
@@ -236,11 +242,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing attendance file:', error);
     
     return NextResponse.json(
-      { error: error.message || 'Failed to process attendance file' },
+      { error: error instanceof Error ? error.message : 'Failed to process attendance file' },
       { status: 500 }
     );
   }

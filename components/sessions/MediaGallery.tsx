@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Image as ImageIcon, Trash2, Eye } from 'lucide-react';
+import { Play, Image as ImageIcon, Trash2, Eye, FileText, ExternalLink } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 import ImageLightbox from './ImageLightbox';
-import { SessionMedia, formatFileSize, isVideoFile, isImageFile } from '@/types/session-media';
+import { SessionMedia, formatFileSize, isVideoFile, isImageFile, isDocumentFile, getDocumentTypeLabel } from '@/types/session-media';
 
 interface MediaGalleryProps {
   sessionId: string;
@@ -38,7 +38,8 @@ export default function MediaGallery({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete media');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to delete media');
       }
 
       onMediaDeleted?.(mediaId);
@@ -48,7 +49,7 @@ export default function MediaGallery({
         setSelectedVideo(null);
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting media:', error);
     } finally {
       setDeleting(null);
@@ -67,9 +68,10 @@ export default function MediaGallery({
     setLightboxIndex(0);
   };
 
-  // Separate videos and images
+  // Separate files by type
   const videos = media.filter(m => isVideoFile(m.mime_type));
   const images = media.filter(m => isImageFile(m.mime_type));
+  const documents = media.filter(m => isDocumentFile(m.mime_type));
 
   if (media.length === 0) {
     return (
@@ -196,6 +198,54 @@ export default function MediaGallery({
                   <div className="p-3">
                     <p className="text-sm font-medium truncate">{image.file_name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(image.file_size)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Documents */}
+      {documents.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="h-4 w-4" />
+            <h4 className="font-medium text-gray-900">Documents</h4>
+            <Badge variant="secondary">{documents.length}</Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {documents.map((document) => (
+              <Card key={document.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <FileText className="h-5 w-5 shrink-0 text-blue-600" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{document.file_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {getDocumentTypeLabel(document.mime_type)} · {formatFileSize(document.file_size)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={document.public_url || '#'} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                      {editable && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMedia(document.id)}
+                          disabled={deleting === document.id}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

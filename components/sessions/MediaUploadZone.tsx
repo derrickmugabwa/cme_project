@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, X, FileVideo, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, X, FileVideo, Image as ImageIcon, AlertCircle, FileText } from 'lucide-react';
 import { 
   SessionMedia, 
   MediaUploadProgress, 
   validateMediaFile, 
   formatFileSize,
-  getFileTypeIcon 
+  getFileTypeIcon,
+  getMediaFileType
 } from '@/types/session-media';
 
 interface MediaUploadZoneProps {
@@ -75,7 +76,7 @@ export default function MediaUploadZone({
         id: `preview-${Date.now()}-${Math.random()}`,
         session_id: 'preview',
         file_name: file.name,
-        file_type: file.type.startsWith('video/') ? 'video' : 'image',
+        file_type: getMediaFileType(file),
         file_size: file.size,
         mime_type: file.type,
         storage_path: '',
@@ -106,7 +107,7 @@ export default function MediaUploadZone({
     setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
     
     // Upload each file
-    const uploadPromises = validFiles.map(async (file, index) => {
+    const uploadPromises = validFiles.map(async (file) => {
       try {
         const uploadedMedia = await uploadFile(file, sessionId);
         
@@ -164,7 +165,14 @@ export default function MediaUploadZone({
     onDrop,
     accept: {
       'video/*': ['.mp4', '.mov', '.avi', '.webm'],
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif']
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif'],
+      'application/pdf': ['.pdf'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
     },
     maxFiles,
     disabled
@@ -194,20 +202,21 @@ export default function MediaUploadZone({
                 <Upload className="h-8 w-8 text-gray-400" />
                 <FileVideo className="h-8 w-8 text-gray-400" />
                 <ImageIcon className="h-8 w-8 text-gray-400" />
+                <FileText className="h-8 w-8 text-gray-400" />
               </div>
               
               <div>
                 <p className="text-lg font-medium text-gray-900">
-                  {isDragActive ? 'Drop files here' : 'Upload media files'}
+                  {isDragActive ? 'Drop files here' : 'Upload session files'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Drag & drop or click to select videos and images
+                  Drag & drop or click to select videos, images, and documents
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Supported: MP4, MOV, AVI, WebM (videos) • JPEG, PNG, WebP, GIF (images)
+                  Supported: MP4, MOV, AVI, WebM (videos), JPEG, PNG, WebP, GIF (images), PDF, PPT, PPTX, DOC, DOCX, XLS, XLSX (documents)
                 </p>
                 <p className="text-xs text-gray-400">
-                  Max size: 500MB for videos, 10MB for images
+                  Max size: 500MB for videos, 10MB for images, 50MB for documents
                 </p>
               </div>
               
@@ -294,7 +303,7 @@ async function uploadFile(file: File, sessionId?: string): Promise<SessionMedia>
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('fileType', file.type.startsWith('video/') ? 'video' : 'image');
+  formData.append('fileType', getMediaFileType(file));
 
   const response = await fetch(`/api/sessions/${sessionId}/media`, {
     method: 'POST',

@@ -51,6 +51,7 @@ export default function SiteManagementLayout({
     { href: "/dashboard/admin/site/cta", label: "Call to Action" },
     { href: "/dashboard/admin/site/navbar", label: "Navigation" },
     { href: "/dashboard/admin/site/footer", label: "Footer" },
+    { href: "/dashboard/admin/site/legal-pages", label: "Legal Pages" },
   ];
 
   return (
