@@ -6,9 +6,9 @@ import { ProfileSidebar } from '@/components/profile/profile-sidebar'
 export default async function ProfilePage() {
   const supabase = await createClient()
   
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
   
-  if (!session) {
+  if (userError || !user) {
     redirect('/auth/login')
   }
   
@@ -16,11 +16,11 @@ export default async function ProfilePage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
   
   if (!profile) {
-    redirect('/dashboard')
+    redirect('/auth/error?error=Profile not found. Please contact an administrator.')
   }
   
   return (

@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
 import { Logo } from '@/lib/logo-service'
@@ -23,7 +22,6 @@ export function LoginForm({ logo, className, ...props }: LoginFormProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,6 +58,11 @@ export function LoginForm({ logo, className, ...props }: LoginFormProps) {
         
         if (profileError) {
           console.error('Error checking user status:', profileError)
+          await supabase.auth.signOut()
+          toast.dismiss(loadingToast)
+          toast.error('Your account profile could not be found. Please contact an administrator.')
+          setError('Your account profile could not be found. Please contact an administrator.')
+          return
         } else if (profile?.disabled) {
           // User is disabled, sign them out and show error
           await supabase.auth.signOut()

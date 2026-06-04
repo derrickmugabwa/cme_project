@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,36 +8,49 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/use-toast'
-import { Download, FileText, Film, Music, Image, File, Presentation, Search, Filter } from 'lucide-react'
+import { Download, FileText, Film, Music, Image as ImageIcon, File, Presentation, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface ContentListProps {
   userId: string
   userRole: string
 }
 
+interface Department {
+  id: string
+  name: string
+}
+
+interface ContentItem {
+  id: string
+  title: string
+  description: string | null
+  file_path: string
+  file_size: number
+  content_type: string
+  department_id: string | null
+  organisation_id: string | null
+  download_count: number | null
+  profiles?: { full_name: string | null } | null
+  courses?: { title: string | null } | null
+  departments?: { name: string | null } | null
+  organisations?: { name: string | null } | null
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function ContentList({ userId, userRole }: ContentListProps) {
-  const [content, setContent] = useState<any[]>([])
-  const [filteredContent, setFilteredContent] = useState<any[]>([])
+  const [content, setContent] = useState<ContentItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [contentTypeFilter, setContentTypeFilter] = useState<string>('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('')
-  const [departments, setDepartments] = useState<any[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const supabase = createClient()
-  
-  // Add a function to seed test content if needed
-  const seedTestContent = async () => {
-    try {
-      const response = await fetch('/api/seed-content')
-      const result = await response.json()
-      console.log('Seed content result:', result)
-      return result.success
-    } catch (error) {
-      console.error('Error seeding content:', error)
-      return false
-    }
-  }
   
   useEffect(() => {
     const fetchContent = async () => {
@@ -69,7 +82,8 @@ export function ContentList({ userId, userRole }: ContentListProps) {
             *,
             profiles:faculty_id(full_name),
             courses:course_id(title),
-            departments:department_id(name)
+            departments:department_id(name),
+            organisations:organisation_id(name)
           `)
         
         // Apply role-based filtering
@@ -95,12 +109,11 @@ export function ContentList({ userId, userRole }: ContentListProps) {
         })
         
         setContent(data || [])
-        setFilteredContent(data || [])
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error:', error)
         toast({
           title: 'Error',
-          description: error.message,
+          description: getErrorMessage(error, 'Error fetching content'),
           variant: 'destructive'
         })
       } finally {
@@ -119,7 +132,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
         }
         
         setDepartments(data || [])
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error:', error)
       }
     }
@@ -128,8 +141,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
     fetchDepartments()
   }, [supabase, userId, userRole])
   
-  useEffect(() => {
-    // Apply filters
+  const filteredContent = useMemo(() => {
     let filtered = [...content]
     
     if (searchQuery) {
@@ -148,8 +160,29 @@ export function ContentList({ userId, userRole }: ContentListProps) {
       filtered = filtered.filter(item => item.department_id === departmentFilter)
     }
     
-    setFilteredContent(filtered)
+    return filtered
   }, [content, searchQuery, contentTypeFilter, departmentFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredContent.length / pageSize))
+  const activePage = Math.min(currentPage, totalPages)
+  const paginatedContent = useMemo(() => {
+    const startIndex = (activePage - 1) * pageSize
+    return filteredContent.slice(startIndex, startIndex + pageSize)
+  }, [filteredContent, activePage, pageSize])
+
+  const handleFilterChange = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setCurrentPage(1)
+  }
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(parseInt(value, 10))
+    setCurrentPage(1)
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages))
+  }
   
   const getContentTypeIcon = (type: string) => {
     switch (type) {
@@ -164,13 +197,13 @@ export function ContentList({ userId, userRole }: ContentListProps) {
       case 'video':
         return <Film className="h-5 w-5 text-pink-500" />
       case 'image':
-        return <Image className="h-5 w-5 text-green-500" />
+        return <ImageIcon className="h-5 w-5 text-green-500" />
       default:
         return <File className="h-5 w-5 text-gray-500" />
     }
   }
   
-  const handleDownload = async (contentItem: any) => {
+  const handleDownload = async (contentItem: ContentItem) => {
     try {
       // 1. Get download URL
       const { data, error } = await supabase.storage
@@ -193,10 +226,10 @@ export function ContentList({ userId, userRole }: ContentListProps) {
       // 3. Trigger download
       window.open(data.signedUrl, '_blank')
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: getErrorMessage(error, 'Error creating download URL'),
         variant: 'destructive'
       })
     }
@@ -235,12 +268,15 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                 placeholder="Search content..."
                 className="pl-8"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1)
+                }}
               />
             </div>
             
             <div className="flex flex-col md:flex-row gap-2">
-              <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+              <Select value={contentTypeFilter} onValueChange={handleFilterChange(setContentTypeFilter)}>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
@@ -256,7 +292,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                 </SelectContent>
               </Select>
               
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <Select value={departmentFilter} onValueChange={handleFilterChange(setDepartmentFilter)}>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="Filter by department" />
                 </SelectTrigger>
@@ -286,7 +322,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
             </div>
           ) : (
             <div className="border rounded-md divide-y">
-              {filteredContent.map((item) => (
+              {paginatedContent.map((item) => (
                 <div key={item.id} className="p-4 hover:bg-muted/50">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
@@ -312,11 +348,14 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                               {item.departments.name || 'No Department'}
                             </Badge>
                           )}
+                          <Badge variant={item.organisation_id ? 'secondary' : 'outline'} className="text-xs">
+                            {item.organisations?.name || 'All organisations'}
+                          </Badge>
                         </div>
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span>Size: {formatFileSize(item.file_size)}</span>
                           <span>Uploaded by: {item.profiles?.full_name || 'Unknown'}</span>
-                          <span>Downloads: {item.download_count}</span>
+                          <span>Downloads: {item.download_count || 0}</span>
                         </div>
                       </div>
                     </div>
@@ -332,6 +371,79 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {!isLoading && filteredContent.length > 0 && (
+            <div className="flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {((activePage - 1) * pageSize) + 1} to {Math.min(activePage * pageSize, filteredContent.length)} of {filteredContent.length} content items
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Show:</span>
+                  <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                    <SelectTrigger className="w-20 border-[#008C45]/30 focus:ring-[#008C45]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(activePage - 1)}
+                      disabled={activePage === 1}
+                      className="border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">Previous</span>
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, index) => index + 1)
+                        .filter((page) => page === 1 || page === totalPages || Math.abs(page - activePage) <= 1)
+                        .map((page, index, pages) => {
+                          const showEllipsis = index > 0 && page - pages[index - 1] > 1
+
+                          return (
+                            <div key={page} className="flex items-center">
+                              {showEllipsis && <span className="px-2 text-sm text-muted-foreground">...</span>}
+                              <Button
+                                variant={activePage === page ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handlePageChange(page)}
+                                className={`h-8 w-8 p-0 ${
+                                  activePage === page
+                                    ? 'bg-[#008C45] text-white hover:bg-[#006633]'
+                                    : 'border-[#008C45]/30 text-[#008C45] hover:bg-green-50'
+                                }`}
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(activePage + 1)}
+                      disabled={activePage === totalPages}
+                      className="border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
+                    >
+                      <span className="hidden sm:inline">Next</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

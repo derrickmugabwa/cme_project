@@ -49,6 +49,7 @@ const Textarea = ({ className, ...props }: React.ComponentProps<typeof BaseTexta
 import { toast } from '@/components/ui/use-toast'
 import { Upload, File, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { OrganisationSelect } from '@/components/organisation-select'
 
 interface UploadContentFormProps {
   userId: string
@@ -59,6 +60,8 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
   const [description, setDescription] = useState('')
   const [contentType, setContentType] = useState<string>('')
   const [departmentId, setDepartmentId] = useState<string>('')
+  const [visibility, setVisibility] = useState<'all' | 'organisation'>('all')
+  const [organisationId, setOrganisationId] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [departments, setDepartments] = useState<any[]>([])
@@ -132,6 +135,15 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       })
       return
     }
+
+    if (visibility === 'organisation' && !organisationId) {
+      toast({
+        title: 'Error',
+        description: 'Please select an organisation for restricted content',
+        variant: 'destructive'
+      })
+      return
+    }
     
     setIsUploading(true)
     
@@ -162,6 +174,7 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
           content_type: contentType,
           faculty_id: userId,
           department_id: departmentId && departmentId !== 'none' ? departmentId : null,
+          organisation_id: visibility === 'organisation' ? organisationId : null,
           is_published: true
         })
       
@@ -179,6 +192,8 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       setDescription('')
       setContentType('')
       setDepartmentId('')
+      setVisibility('all')
+      setOrganisationId('')
       setFile(null)
       
       // Redirect to content list
@@ -214,6 +229,15 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
       })
       return
     }
+
+    if (visibility === 'organisation' && !organisationId) {
+      toast({
+        title: "Error",
+        description: "Please select an organisation for restricted content",
+        variant: "destructive"
+      })
+      return
+    }
     
     setIsUploading(true)
     
@@ -244,6 +268,7 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
           content_type: contentType || 'other',
           faculty_id: userId,
           department_id: departmentId && departmentId !== 'none' ? departmentId : null,
+          organisation_id: visibility === 'organisation' ? organisationId : null,
           is_published: true // Always publish as available
         })
       
@@ -356,6 +381,29 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="visibility">Audience</Label>
+                  <Select value={visibility} onValueChange={(value) => setVisibility(value as 'all' | 'organisation')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select audience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All organisations</SelectItem>
+                      <SelectItem value="organisation">Specific organisation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {visibility === 'organisation' && (
+                  <OrganisationSelect
+                    value={organisationId}
+                    onValueChange={setOrganisationId}
+                    includeOther={false}
+                    activeOnly
+                    label="Organisation"
+                    placeholder="Select organisation"
+                    required
+                  />
+                )}
               </CardContent>
             </Card>
             

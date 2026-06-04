@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, User, Settings, UsersRound, BarChart2, Award, X, FileBarChart } from 'lucide-react'
+import { Home, FileText, Video, ClipboardCheck, Calendar, Coins, UsersRound, BarChart2, Award, X, FileBarChart, Building2 } from 'lucide-react'
 import Image from 'next/image'
 
 interface Logo {
@@ -151,6 +151,10 @@ export function Sidebar({ isOpen = false, onClose, logo, userRole }: SidebarProp
                 <NavItem href="/dashboard/admin/users" onClose={onClose}>
                   <UsersRound className="h-4 w-4" />
                   User Management
+                </NavItem>
+                <NavItem href="/dashboard/admin/organisations" onClose={onClose}>
+                  <Building2 className="h-4 w-4" />
+                  Organisations
                 </NavItem>
                 <NavItem href="/dashboard/admin/payments" onClose={onClose}>
                   <BarChart2 className="h-4 w-4" />

@@ -59,10 +59,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
   
-  // Redirect authenticated users to dashboard if they try to access auth pages
+  const shouldRedirectAuthenticatedAuthPage =
+    pathname === '/auth/login' ||
+    pathname === '/auth/sign-up' ||
+    pathname === '/auth/forgot-password'
+
+  // Redirect authenticated users away from entry auth pages only.
+  // Keep /auth/error and /auth/update-password reachable for signed-in users.
   if (
     user &&
-    request.nextUrl.pathname.startsWith('/auth')
+    shouldRedirectAuthenticatedAuthPage
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

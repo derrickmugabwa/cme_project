@@ -19,6 +19,8 @@ type RegistrationFormData = {
   registrationNumber: string;
   professionalBoard: string;
   institution: string;
+  organisationId: string;
+  organisationNameOther: string;
   acceptedTerms: boolean;
 };
 
@@ -48,6 +50,8 @@ const initialFormData: RegistrationFormData = {
   registrationNumber: '',
   professionalBoard: '',
   institution: '',
+  organisationId: '',
+  organisationNameOther: '',
   acceptedTerms: false,
 };
 

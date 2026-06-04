@@ -12,17 +12,30 @@ import Link from 'next/link';
 import { createClient } from '@/lib/client';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { OrganisationSelect, OTHER_ORGANISATION_VALUE } from '@/components/organisation-select';
+
+type Step2ProfessionalInfoFormValues = {
+  professionalCadre: string;
+  registrationNumber: string;
+  professionalBoard: string;
+  organisationId: string;
+  organisationNameOther: string;
+  acceptedTerms: boolean;
+};
 
 // Validation schema for Step 2
-const schema = yup.object().shape({
+const schema: yup.ObjectSchema<Step2ProfessionalInfoFormValues> = yup.object({
   professionalCadre: yup.string().required('Professional cadre is required'),
   registrationNumber: yup.string().required('Registration number is required'),
   professionalBoard: yup.string().required('Professional board is required'),
-  institution: yup.string().required('Institution is required'),
+  organisationId: yup.string().required('Institution is required'),
+  organisationNameOther: yup.string().defined().when('organisationId', {
+    is: OTHER_ORGANISATION_VALUE,
+    then: (schema) => schema.required('Institution is required'),
+    otherwise: (schema) => schema.default(''),
+  }),
   acceptedTerms: yup.boolean().required('You must accept the terms and policy').oneOf([true], 'You must accept the terms and policy'),
 });
-
-type Step2ProfessionalInfoFormValues = yup.InferType<typeof schema>;
 
 export function Step2ProfessionalInfo() {
   const { formData, setFormValue, goToPreviousStep } = useRegistration();
@@ -38,7 +51,8 @@ export function Step2ProfessionalInfo() {
       professionalCadre: formData.professionalCadre,
       registrationNumber: formData.registrationNumber,
       professionalBoard: formData.professionalBoard,
-      institution: formData.institution,
+      organisationId: formData.organisationId,
+      organisationNameOther: formData.organisationNameOther,
       acceptedTerms: formData.acceptedTerms,
     },
   });
@@ -85,7 +99,9 @@ export function Step2ProfessionalInfo() {
             registration_number: data.registrationNumber,
             professional_board: data.professionalBoard,
             phone_number: formData.phoneNumber,
-            institution: data.institution,
+            institution: data.organisationNameOther || formData.institution,
+            organisation_id: data.organisationId !== OTHER_ORGANISATION_VALUE ? data.organisationId : null,
+            organisation_name_other: data.organisationId === OTHER_ORGANISATION_VALUE ? data.organisationNameOther : null,
             accepted_terms: data.acceptedTerms,
             role: 'user',
           },
@@ -179,23 +195,26 @@ export function Step2ProfessionalInfo() {
             {errors.professionalBoard && <p className="text-sm text-red-500">{errors.professionalBoard.message}</p>}
           </div>
           
-          <div className="grid gap-2">
-            <Label htmlFor="institution">Institution of Work</Label>
-            <Controller
-              name="institution"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  id="institution"
-                  type="text"
-                  placeholder="e.g. Kenyatta National Hospital"
-                  {...field}
-                  className={errors.institution ? 'border-red-300' : ''}
-                />
-              )}
-            />
-            {errors.institution && <p className="text-sm text-red-500">{errors.institution.message}</p>}
-          </div>
+          <Controller
+            name="organisationId"
+            control={control}
+            render={({ field }) => (
+              <Controller
+                name="organisationNameOther"
+                control={control}
+                render={({ field: otherField }) => (
+                  <OrganisationSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    otherValue={otherField.value || ''}
+                    onOtherValueChange={otherField.onChange}
+                    required
+                    error={errors.organisationId?.message || errors.organisationNameOther?.message}
+                  />
+                )}
+              />
+            )}
+          />
         </div>
 
         <div className="flex items-center space-x-2 mt-6">

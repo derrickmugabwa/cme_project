@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/client';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,10 @@ import { LoadingPage } from '@/components/ui/loading-spinner';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, UserCog } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { OrganisationSelect } from '@/components/organisation-select';
 
 interface User {
   id: string;
@@ -24,6 +25,7 @@ interface User {
   updated_at?: string;
   title?: string;
   institution?: string;
+  organisation_id?: string | null;
   professional_cadre?: string;
   country?: string;
   registration_number?: string;
@@ -31,6 +33,16 @@ interface User {
   phone_number?: string;
   accepted_terms?: boolean;
   disabled?: boolean;
+}
+
+interface Organisation {
+  id: string;
+  name: string;
+  status: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export default function UserEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,10 +59,10 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('user');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [organisations, setOrganisations] = useState<Organisation[]>([]);
   
   // Form state
   const [formData, setFormData] = useState<Partial<User>>({});
@@ -59,6 +71,18 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
     async function fetchUserData() {
       try {
         setLoading(true);
+        const supabase = createClient();
+        const { data: organisationData, error: organisationsError } = await supabase
+          .from('organisations')
+          .select('id, name, status')
+          .neq('status', 'disabled')
+          .order('name', { ascending: true });
+
+        if (organisationsError) {
+          console.error('Error fetching organisations:', organisationsError);
+        } else {
+          setOrganisations(organisationData || []);
+        }
         
         // If it's a new user, initialize with empty form
         if (isNewUser) {
@@ -68,11 +92,13 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
             email: '',
             title: '',
             institution: '',
+            organisation_id: null,
             professional_cadre: '',
             country: '',
             registration_number: '',
             professional_board: '',
             phone_number: '',
+            role: 'user',
           });
           setSelectedRole('user');
           setLoading(false);
@@ -80,7 +106,6 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
         }
         
         // Fetch existing user data
-        const supabase = createClient();
         const { data: user, error } = await supabase
           .from('profiles')
           .select('*')
@@ -100,6 +125,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
           email: user.email || '',
           title: user.title || '',
           institution: user.institution || '',
+          organisation_id: user.organisation_id || null,
           professional_cadre: user.professional_cadre || '',
           country: user.country || '',
           registration_number: user.registration_number || '',
@@ -125,6 +151,16 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
   
   const handleRoleChange = (value: string) => {
     setFormData(prev => ({ ...prev, role: value }));
+    setSelectedRole(value);
+  };
+
+  const handleOrganisationChange = (value: string) => {
+    const organisation = organisations.find(item => item.id === value);
+    setFormData(prev => ({
+      ...prev,
+      organisation_id: value,
+      institution: organisation?.name || prev.institution || '',
+    }));
   };
   
   const handleSave = async () => {
@@ -196,6 +232,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
             title: formData.title,
             role: formData.role,
             institution: formData.institution,
+            organisation_id: formData.organisation_id || null,
             professional_cadre: formData.professional_cadre,
             country: formData.country,
             registration_number: formData.registration_number,
@@ -212,9 +249,9 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
         toast.success('User updated successfully');
         router.push('/dashboard/admin/users');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving user:', error);
-      toast.error(error.message || 'An error occurred while saving user data');
+      toast.error(getErrorMessage(error, 'An error occurred while saving user data'));
     } finally {
       setSaving(false);
     }
@@ -222,24 +259,6 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
   
   if (loading) {
     return <LoadingPage />;
-  }
-  
-  if (error) {
-    return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-600">Error</CardTitle>
-            <CardDescription>
-              {error}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/dashboard/admin/users')}>Back to Users</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
   
   return (
@@ -266,7 +285,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
             <CardHeader>
               <CardTitle>User Profile</CardTitle>
               <CardDescription>
-                Update the user's profile information
+                Update the user&apos;s profile information
               </CardDescription>
             </CardHeader>
             
@@ -354,15 +373,14 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="institution">Institution</Label>
-                  <Input
-                    id="institution"
-                    name="institution"
-                    value={formData.institution || ''}
-                    onChange={handleInputChange}
-                  />
-                </div>
+                <OrganisationSelect
+                  value={formData.organisation_id || ''}
+                  onValueChange={handleOrganisationChange}
+                  includeOther={false}
+                  label="Institution"
+                  placeholder="Select institution"
+                  showStatus
+                />
                 
                 <div className="space-y-2">
                   <Label htmlFor="country">Country</Label>
@@ -425,7 +443,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
             <CardHeader>
               <CardTitle>User Role</CardTitle>
               <CardDescription>
-                Manage the user's role and access permissions
+                Manage the user&apos;s role and access permissions
               </CardDescription>
             </CardHeader>
             
@@ -493,7 +511,7 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                 <div className="border-b pb-6">
                   <h3 className="text-lg font-medium mb-2">Password Reset</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Reset the user's password by sending a reset link or setting a new password directly.
+                    Reset the user&apos;s password by sending a reset link or setting a new password directly.
                   </p>
                   
                   <div className="space-y-4">
@@ -522,9 +540,9 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                             }
                             
                             toast.success(data.message || 'Password reset email sent');
-                          } catch (error: any) {
+                          } catch (error: unknown) {
                             console.error('Error sending password reset:', error);
-                            toast.error(error.message || 'Failed to send password reset');
+                            toast.error(getErrorMessage(error, 'Failed to send password reset'));
                           }
                         }}
                       >
@@ -586,9 +604,9 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                               setConfirmNewPassword('');
                               
                               toast.success(data.message || 'Password has been reset successfully');
-                            } catch (error: any) {
+                            } catch (error: unknown) {
                               console.error('Error resetting password:', error);
-                              toast.error(error.message || 'Failed to reset password');
+                              toast.error(getErrorMessage(error, 'Failed to reset password'));
                             }
                           }}
                         >
@@ -640,9 +658,9 @@ export default function UserEditPage({ params }: { params: Promise<{ id: string 
                         setUser(prev => prev ? {...prev, disabled: !prev.disabled} : null);
                         
                         toast.success(data.message || 'Account status updated');
-                      } catch (error: any) {
+                      } catch (error: unknown) {
                         console.error('Error updating account status:', error);
-                        toast.error(error.message || 'Failed to update account status');
+                        toast.error(getErrorMessage(error, 'Failed to update account status'));
                       }
                     }}
                   >

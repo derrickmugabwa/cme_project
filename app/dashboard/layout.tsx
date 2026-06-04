@@ -22,14 +22,15 @@ export default async function DashboardLayout({
     redirect('/auth/login')
   }
   
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('username, full_name, role')
     .eq('id', user.id)
     .single()
   
-  if (!profile) {
-    redirect('/auth/login')
+  if (profileError || !profile) {
+    console.error('Profile lookup error:', profileError)
+    redirect('/auth/error?error=Profile not found. Please contact an administrator.')
   }
   
   // Format role for display

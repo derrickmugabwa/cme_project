@@ -2,6 +2,10 @@ import { createClient } from '@/lib/server';
 import { createAdminClient } from '@/lib/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'An error occurred while creating the user';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -69,6 +73,7 @@ export async function POST(request: NextRequest) {
           full_name: userData.full_name || '',
           title: userData.title || '',
           institution: userData.institution || '',
+          organisation_id: userData.organisation_id || null,
           professional_cadre: userData.professional_cadre || '',
           country: userData.country || '',
           registration_number: userData.registration_number || '',
@@ -100,10 +105,10 @@ export async function POST(request: NextRequest) {
       },
       message: 'User created successfully. A confirmation email has been sent.'
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in user creation:', error);
     return NextResponse.json(
-      { error: error.message || 'An error occurred while creating the user' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }

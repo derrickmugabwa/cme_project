@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
 import { Logo } from '@/lib/logo-service'
+import { OrganisationSelect, OTHER_ORGANISATION_VALUE } from '@/components/organisation-select'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   logo: Logo | null;
@@ -35,7 +36,7 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<'user' | 'faculty' | 'admin'>('user')
+  const role = 'user' as const
   const [passwordErrors, setPasswordErrors] = useState<string[]>([])
   const [showPassword, setShowPassword] = useState(false)
   const [showRepeatPassword, setShowRepeatPassword] = useState(false)
@@ -47,7 +48,8 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
   const [registrationNumber, setRegistrationNumber] = useState('')
   const [professionalBoard, setProfessionalBoard] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [institution, setInstitution] = useState('')
+  const [organisationId, setOrganisationId] = useState('')
+  const [organisationNameOther, setOrganisationNameOther] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   
   const [error, setError] = useState<string | null>(null)
@@ -131,7 +133,13 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
       return
     }
     
-    if (!institution) {
+    if (!organisationId) {
+      setError('Please select your institution of work')
+      setIsLoading(false)
+      return
+    }
+
+    if (organisationId === OTHER_ORGANISATION_VALUE && !organisationNameOther.trim()) {
       setError('Please enter your institution of work')
       setIsLoading(false)
       return
@@ -167,6 +175,16 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
           data: {
             full_name: fullName,
             role,
+            title,
+            country,
+            professional_cadre: professionalCadre,
+            registration_number: registrationNumber,
+            professional_board: professionalBoard,
+            phone_number: phoneNumber,
+            institution: organisationNameOther.trim(),
+            organisation_id: organisationId !== OTHER_ORGANISATION_VALUE ? organisationId : null,
+            organisation_name_other: organisationId === OTHER_ORGANISATION_VALUE ? organisationNameOther.trim() : null,
+            accepted_terms: acceptedTerms,
           },
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
@@ -185,7 +203,8 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
             registration_number: registrationNumber,
             professional_board: professionalBoard,
             phone_number: phoneNumber,
-            institution,
+            institution: organisationId === OTHER_ORGANISATION_VALUE ? organisationNameOther.trim() : undefined,
+            ...(organisationId !== OTHER_ORGANISATION_VALUE ? { organisation_id: organisationId } : {}),
             accepted_terms: acceptedTerms
           })
           .eq('id', authData.user.id)
@@ -339,17 +358,13 @@ export function SignUpForm({ logo, className, ...props }: SignUpFormProps) {
                     />
                   </div>
                   
-                  <div className="grid gap-2">
-                    <Label htmlFor="institution">Institution of Work</Label>
-                    <Input
-                      id="institution"
-                      type="text"
-                      placeholder="e.g. Kenyatta National Hospital"
-                      value={institution}
-                      onChange={(e) => setInstitution(e.target.value)}
-                      required
-                    />
-                  </div>
+                  <OrganisationSelect
+                    value={organisationId}
+                    onValueChange={setOrganisationId}
+                    otherValue={organisationNameOther}
+                    onOtherValueChange={setOrganisationNameOther}
+                    required
+                  />
                 </div>
               </div>
               
