@@ -3,20 +3,11 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/client'
 import { Button } from '@/components/ui/button'
-import { Card as BaseCard, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card as BaseCard, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Custom Card component with rounded corners
 const Card = ({ className, ...props }: React.ComponentProps<typeof BaseCard>) => (
   <BaseCard className={`rounded-2xl overflow-hidden shadow-sm ${className || ''}`} {...props} />
-)
-
-// Custom themed Button variants
-const PrimaryButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
-  <Button className={`bg-[#008C45] hover:bg-[#006633] text-white rounded-xl ${className || ''}`} {...props} />
-)
-
-const SecondaryButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
-  <Button variant="outline" className={`border-gray-300 hover:bg-gray-100 rounded-xl ${className || ''}`} {...props} />
 )
 
 const SuccessButton = ({ className, ...props }: React.ComponentProps<typeof Button>) => (
@@ -26,6 +17,7 @@ import { Input as BaseInput } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea as BaseTextarea } from '@/components/ui/textarea'
 import { Select as BaseSelect, SelectContent, SelectItem, SelectTrigger as BaseSelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 
 // Custom Select Trigger with rounded corners
 const SelectTrigger = ({ className, ...props }: React.ComponentProps<typeof BaseSelectTrigger>) => (
@@ -55,6 +47,15 @@ interface UploadContentFormProps {
   userId: string
 }
 
+interface Department {
+  id: string
+  name: string
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'An unexpected error occurred'
+}
+
 export function UploadContentForm({ userId }: UploadContentFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -62,9 +63,12 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
   const [departmentId, setDepartmentId] = useState<string>('')
   const [visibility, setVisibility] = useState<'all' | 'organisation'>('all')
   const [organisationId, setOrganisationId] = useState('')
+  const [isPublished, setIsPublished] = useState(true)
+  const [publishStartAt, setPublishStartAt] = useState('')
+  const [publishEndAt, setPublishEndAt] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [departments, setDepartments] = useState<any[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   
   const router = useRouter()
   const supabase = createClient()
@@ -104,6 +108,82 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
         else setContentType('other')
       }
     }
+  }
+
+  const getPublishWindow = () => {
+    const startAt = publishStartAt ? new Date(publishStartAt) : null
+    const endAt = publishEndAt ? new Date(publishEndAt) : null
+
+    if (startAt && Number.isNaN(startAt.getTime())) {
+      throw new Error('Please enter a valid publish start date')
+    }
+
+    if (endAt && Number.isNaN(endAt.getTime())) {
+      throw new Error('Please enter a valid publish end date')
+    }
+
+    if (startAt && endAt && endAt <= startAt) {
+      throw new Error('Publish end date must be after the start date')
+    }
+
+    return {
+      publish_start_at: startAt ? startAt.toISOString() : null,
+      publish_end_at: endAt ? endAt.toISOString() : null,
+    }
+  }
+
+  const uploadContent = async () => {
+    if (!file) {
+      throw new Error('Please select a file to upload')
+    }
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+    const filePath = `${userId}/${fileName}`
+    const publishWindow = getPublishWindow()
+
+    const mimeType = file.type || 'application/octet-stream'
+    const { error: uploadError } = await supabase.storage
+      .from('content')
+      .upload(filePath, file, { contentType: mimeType, upsert: true })
+
+    if (uploadError) {
+      throw new Error(`Error uploading file: ${uploadError.message}`)
+    }
+
+    const { error: dbError } = await supabase
+      .from('educational_content')
+      .insert({
+        title,
+        description,
+        file_path: filePath,
+        file_name: file.name,
+        file_size: file.size,
+        content_type: contentType || 'other',
+        faculty_id: userId,
+        department_id: departmentId && departmentId !== 'none' ? departmentId : null,
+        organisation_id: visibility === 'organisation' ? organisationId : null,
+        is_published: isPublished,
+        ...publishWindow,
+      })
+
+    if (dbError) {
+      await supabase.storage.from('content').remove([filePath])
+      throw new Error(`Error saving content record: ${dbError.message}`)
+    }
+  }
+
+  const resetForm = () => {
+    setTitle('')
+    setDescription('')
+    setContentType('')
+    setDepartmentId('')
+    setVisibility('all')
+    setOrganisationId('')
+    setIsPublished(true)
+    setPublishStartAt('')
+    setPublishEndAt('')
+    setFile(null)
   }
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,62 +228,23 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
     setIsUploading(true)
     
     try {
-      // 1. Upload file to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-      const filePath = `${userId}/${fileName}`
-      
-      const mimeType = file.type || 'application/octet-stream'
-      const { error: uploadError } = await supabase.storage
-        .from('content')
-        .upload(filePath, file, { contentType: mimeType, upsert: true })
-      
-      if (uploadError) {
-        throw new Error(`Error uploading file: ${uploadError.message}`)
-      }
-      
-      // 2. Create record in educational_content table
-      const { error: dbError } = await supabase
-        .from('educational_content')
-        .insert({
-          title,
-          description,
-          file_path: filePath,
-          file_name: file.name,
-          file_size: file.size,
-          content_type: contentType,
-          faculty_id: userId,
-          department_id: departmentId && departmentId !== 'none' ? departmentId : null,
-          organisation_id: visibility === 'organisation' ? organisationId : null,
-          is_published: true
-        })
-      
-      if (dbError) {
-        throw new Error(`Error saving content record: ${dbError.message}`)
-      }
+      await uploadContent()
       
       toast({
         title: 'Success',
-        description: 'Educational content uploaded successfully',
+        description: isPublished ? 'Educational content uploaded successfully' : 'Educational content saved as draft',
       })
       
-      // Reset form
-      setTitle('')
-      setDescription('')
-      setContentType('')
-      setDepartmentId('')
-      setVisibility('all')
-      setOrganisationId('')
-      setFile(null)
+      resetForm()
       
       // Redirect to content list
       router.push('/dashboard/content')
       router.refresh()
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: getErrorMessage(error),
         variant: 'destructive'
       })
     } finally {
@@ -242,53 +283,21 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
     setIsUploading(true)
     
     try {
-      // 1. Upload file to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-      const filePath = `${userId}/${fileName}`
-      
-      const mimeType = file.type || 'application/octet-stream'
-      const { error: uploadError } = await supabase.storage
-        .from('content')
-        .upload(filePath, file, { contentType: mimeType, upsert: true })
-      
-      if (uploadError) {
-        throw new Error(`Error uploading file: ${uploadError.message}`)
-      }
-      
-      // 2. Create record in educational_content table with is_published = false
-      const { error: dbError } = await supabase
-        .from('educational_content')
-        .insert({
-          title,
-          description,
-          file_path: filePath,
-          file_name: file.name,
-          file_size: file.size,
-          content_type: contentType || 'other',
-          faculty_id: userId,
-          department_id: departmentId && departmentId !== 'none' ? departmentId : null,
-          organisation_id: visibility === 'organisation' ? organisationId : null,
-          is_published: true // Always publish as available
-        })
-      
-      if (dbError) {
-        throw new Error(`Error saving content record: ${dbError.message}`)
-      }
+      await uploadContent()
       
       toast({
         title: "Success",
-        description: "Educational content saved successfully",
+        description: isPublished ? "Educational content saved and published" : "Educational content saved as draft",
       })
       
       // Redirect to content list
       router.push('/dashboard/content')
       router.refresh()
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive"
       })
     } finally {
@@ -410,19 +419,42 @@ export function UploadContentForm({ userId }: UploadContentFormProps) {
             {/* Status Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Status</CardTitle>
-                <CardDescription>Control content visibility</CardDescription>
+                <CardTitle>Publishing</CardTitle>
+                <CardDescription>Control when content is visible</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between gap-4 rounded-xl border p-3">
+                  <div>
+                    <Label htmlFor="is-published">Published</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Turn off to save this content as a draft.
+                    </p>
+                  </div>
+                  <Switch
                     id="is-published"
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={true}
-                    readOnly
+                    checked={isPublished}
+                    onCheckedChange={setIsPublished}
                   />
-                  <Label htmlFor="is-published">Publish immediately</Label>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="publish-start">Publish From (Optional)</Label>
+                    <Input
+                      id="publish-start"
+                      type="datetime-local"
+                      value={publishStartAt}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPublishStartAt(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="publish-end">Publish Until (Optional)</Label>
+                    <Input
+                      id="publish-end"
+                      type="datetime-local"
+                      value={publishEndAt}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPublishEndAt(event.target.value)}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

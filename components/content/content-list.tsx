@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,41 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/use-toast'
-import { Download, FileText, Film, Music, Image as ImageIcon, File, Presentation, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Archive,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  EyeOff,
+  File,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  MoreHorizontal,
+  Music,
+  Presentation,
+  RotateCcw,
+  Search,
+  Trash2,
+} from 'lucide-react'
 
 interface ContentListProps {
   userId: string
@@ -29,12 +63,20 @@ interface ContentItem {
   content_type: string
   department_id: string | null
   organisation_id: string | null
+  is_published: boolean
+  publish_start_at: string | null
+  publish_end_at: string | null
+  archived_at: string | null
+  archived_by: string | null
+  archive_reason: string | null
   download_count: number | null
   profiles?: { full_name: string | null } | null
   courses?: { title: string | null } | null
   departments?: { name: string | null } | null
   organisations?: { name: string | null } | null
 }
+
+type ContentStatus = 'published' | 'draft' | 'scheduled' | 'expired' | 'archived'
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
@@ -46,11 +88,33 @@ export function ContentList({ userId, userRole }: ContentListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [contentTypeFilter, setContentTypeFilter] = useState<string>('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('active')
   const [departments, setDepartments] = useState<Department[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ContentItem | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<ContentItem | null>(null)
+  const [archiveReason, setArchiveReason] = useState('')
+  const [statusNow, setStatusNow] = useState<number | null>(null)
   
   const supabase = createClient()
+  const canManageContent = userRole === 'faculty' || userRole === 'admin'
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setStatusNow(Date.now())
+    }, 0)
+
+    const intervalId = window.setInterval(() => {
+      setStatusNow(Date.now())
+    }, 60000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      window.clearInterval(intervalId)
+    }
+  }, [])
   
   useEffect(() => {
     const fetchContent = async () => {
@@ -141,6 +205,18 @@ export function ContentList({ userId, userRole }: ContentListProps) {
     fetchDepartments()
   }, [supabase, userId, userRole])
   
+  const getContentStatus = useCallback((item: ContentItem): ContentStatus => {
+    const now = statusNow ?? 0
+    const startsAt = item.publish_start_at ? new Date(item.publish_start_at).getTime() : null
+    const endsAt = item.publish_end_at ? new Date(item.publish_end_at).getTime() : null
+
+    if (item.archived_at) return 'archived'
+    if (!item.is_published) return 'draft'
+    if (startsAt && startsAt > now) return 'scheduled'
+    if (endsAt && endsAt <= now) return 'expired'
+    return 'published'
+  }, [statusNow])
+
   const filteredContent = useMemo(() => {
     let filtered = [...content]
     
@@ -159,9 +235,15 @@ export function ContentList({ userId, userRole }: ContentListProps) {
     if (departmentFilter && departmentFilter !== 'all_departments') {
       filtered = filtered.filter(item => item.department_id === departmentFilter)
     }
+
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(item => !item.archived_at)
+    } else if (statusFilter !== 'all') {
+      filtered = filtered.filter(item => getContentStatus(item) === statusFilter)
+    }
     
     return filtered
-  }, [content, searchQuery, contentTypeFilter, departmentFilter])
+  }, [content, searchQuery, contentTypeFilter, departmentFilter, statusFilter, getContentStatus])
 
   const totalPages = Math.max(1, Math.ceil(filteredContent.length / pageSize))
   const activePage = Math.min(currentPage, totalPages)
@@ -182,6 +264,99 @@ export function ContentList({ userId, userRole }: ContentListProps) {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages))
+  }
+
+  const updateContentItem = async (
+    item: ContentItem,
+    updates: Partial<ContentItem>,
+    successMessage: string
+  ) => {
+    setActionLoadingId(item.id)
+
+    try {
+      const { error } = await supabase
+        .from('educational_content')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', item.id)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      setContent((current) =>
+        current.map((contentItem) =>
+          contentItem.id === item.id
+            ? { ...contentItem, ...updates }
+            : contentItem
+        )
+      )
+
+      toast({
+        title: 'Success',
+        description: successMessage,
+      })
+    } catch (error: unknown) {
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error, 'Failed to update content'),
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const archiveContent = async () => {
+    if (!archiveTarget) return
+
+    await updateContentItem(
+      archiveTarget,
+      {
+        archived_at: new Date().toISOString(),
+        archived_by: userId,
+        archive_reason: archiveReason.trim() || null,
+      },
+      'Content archived successfully'
+    )
+
+    setArchiveTarget(null)
+    setArchiveReason('')
+  }
+
+  const deleteContent = async () => {
+    if (!deleteTarget) return
+
+    setActionLoadingId(deleteTarget.id)
+
+    try {
+      const { error } = await supabase
+        .from('educational_content')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      setContent((current) => current.filter((item) => item.id !== deleteTarget.id))
+      setDeleteTarget(null)
+
+      toast({
+        title: 'Success',
+        description: 'Content deleted successfully',
+      })
+    } catch (error: unknown) {
+      toast({
+        title: 'Error',
+        description: getErrorMessage(error, 'Failed to delete content'),
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
   }
   
   const getContentTypeIcon = (type: string) => {
@@ -239,6 +414,28 @@ export function ContentList({ userId, userRole }: ContentListProps) {
     if (bytes < 1024) return bytes + ' B'
     else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
     else return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
+  const formatDateTime = (value: string | null) => {
+    if (!value) return null
+    return new Date(value).toLocaleString()
+  }
+
+  const getStatusBadge = (item: ContentItem) => {
+    const status = getContentStatus(item)
+
+    switch (status) {
+      case 'published':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Published</Badge>
+      case 'draft':
+        return <Badge variant="secondary">Draft</Badge>
+      case 'scheduled':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">Scheduled</Badge>
+      case 'expired':
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">Expired</Badge>
+      case 'archived':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-200">Archived</Badge>
+    }
   }
   
   return (
@@ -303,6 +500,23 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                   ))}
                 </SelectContent>
               </Select>
+
+              {canManageContent && (
+                <Select value={statusFilter} onValueChange={handleFilterChange(setStatusFilter)}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           
@@ -335,6 +549,7 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                           <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2">
+                          {getStatusBadge(item)}
                           <Badge variant="outline" className="text-xs">
                             {item.content_type.toUpperCase()}
                           </Badge>
@@ -357,17 +572,82 @@ export function ContentList({ userId, userRole }: ContentListProps) {
                           <span>Uploaded by: {item.profiles?.full_name || 'Unknown'}</span>
                           <span>Downloads: {item.download_count || 0}</span>
                         </div>
+                        {(item.publish_start_at || item.publish_end_at || item.archived_at) && (
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            {item.publish_start_at && <span>From: {formatDateTime(item.publish_start_at)}</span>}
+                            {item.publish_end_at && <span>Until: {formatDateTime(item.publish_end_at)}</span>}
+                            {item.archived_at && <span>Archived: {formatDateTime(item.archived_at)}</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDownload(item)}
-                      className="flex-shrink-0 border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDownload(item)}
+                        className="border-[#008C45]/30 text-[#008C45] hover:bg-green-50"
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                      {canManageContent && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={actionLoadingId === item.id}>
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open content actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                updateContentItem(
+                                  item,
+                                  { is_published: !item.is_published },
+                                  item.is_published ? 'Content unpublished' : 'Content published'
+                                )
+                              }
+                            >
+                              {item.is_published ? (
+                                <EyeOff className="mr-2 h-4 w-4" />
+                              ) : (
+                                <Eye className="mr-2 h-4 w-4" />
+                              )}
+                              {item.is_published ? 'Unpublish' : 'Publish'}
+                            </DropdownMenuItem>
+                            {item.archived_at ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  updateContentItem(
+                                    item,
+                                    { archived_at: null, archived_by: null, archive_reason: null },
+                                    'Content restored successfully'
+                                  )
+                                }
+                              >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Restore
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => setArchiveTarget(item)}>
+                                <Archive className="mr-2 h-4 w-4" />
+                                Archive
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => setDeleteTarget(item)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -448,6 +728,56 @@ export function ContentList({ userId, userRole }: ContentListProps) {
           )}
         </div>
       </CardContent>
+
+      <Dialog open={Boolean(archiveTarget)} onOpenChange={(open) => {
+        if (!open) {
+          setArchiveTarget(null)
+          setArchiveReason('')
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Content</DialogTitle>
+            <DialogDescription>
+              Archive &quot;{archiveTarget?.title}&quot;? Archived content is hidden from learners but can be restored later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="archive-reason">Reason (Optional)</label>
+            <Textarea
+              id="archive-reason"
+              value={archiveReason}
+              onChange={(event) => setArchiveReason(event.target.value)}
+              placeholder="Add a short archive reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveTarget(null)}>Cancel</Button>
+            <Button onClick={archiveContent} disabled={Boolean(actionLoadingId)}>
+              Archive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => {
+        if (!open) setDeleteTarget(null)
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Content</DialogTitle>
+            <DialogDescription>
+              Delete &quot;{deleteTarget?.title}&quot; permanently? This removes the content record and its uploaded file.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={deleteContent} disabled={Boolean(actionLoadingId)}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
